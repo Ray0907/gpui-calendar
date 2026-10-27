@@ -1,3 +1,5 @@
+pub mod domain;
+
 use gpui_kit::{Context, IntoElement, Render, TestSupportExt, Window, div, prelude::*};
 
 /// Spike view: a draggable-target "grid" cell used to prove headless drag and layout.
