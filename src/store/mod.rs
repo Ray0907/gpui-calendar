@@ -59,8 +59,11 @@ pub struct Calendar {
     pub visible: bool,
 }
 
+/// Default calendar names in `CalendarId` order (`WORK`, `PERSONAL`, `SIDE`); the theme rules quote them.
+pub const CALENDAR_NAMES: [&str; 3] = ["Work", "Personal", "Side project"];
+
 fn default_calendars() -> Vec<Calendar> {
-    ["Work", "Personal", "Side project"]
+    CALENDAR_NAMES
         .iter()
         .enumerate()
         .map(|(i, n)| Calendar { id: i as CalendarId, name: (*n).into(), visible: true })
