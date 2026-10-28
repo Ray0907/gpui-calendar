@@ -121,8 +121,8 @@ impl Shell {
             .when(on, |d| d.bg(c(n.subtle)))
             .font_weight(FontWeight::MEDIUM)
             .aria_toggled(if on { Toggled::True } else { Toggled::False })
-            .child(format!("{nt:?}"))
-            .child(div().flex().pl(px(3.)).children(chips))
+            .child(div().id(format!("neutral-swatch-{nt:?}")).test_support().flex().pl(px(3.)).children(chips))
+            .child(div().id(format!("neutral-label-{nt:?}")).test_support().child(format!("{nt:?}")))
             .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
                 this.model.set_neutral(nt);
                 this.sync(cx);
