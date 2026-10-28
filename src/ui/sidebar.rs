@@ -21,6 +21,16 @@ use crate::theme::resolve::Theme;
 const AVATAR_STOP_NEAR: f64 = 0.1464;
 const AVATAR_STOP_FAR: f64 = 1. - AVATAR_STOP_NEAR;
 
+/// Banner text sizes, and the line height the mock gives each: 1.4 times a size (guide 4, "line height 1.4").
+pub const BANNER_EYEBROW: f32 = 11.;
+pub const BANNER_TITLE: f32 = 18.;
+pub const BANNER_META: f32 = 12.;
+/// The mock sets the 12px time line at 1.4 of 13.
+pub const BANNER_META_LINE_OF: f32 = 13.;
+pub fn line_for(size: f32) -> f32 {
+    size * 1.4
+}
+
 impl Shell {
     pub(super) fn sidebar(&mut self, t: &Theme, narrow: bool, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let card = div()
@@ -128,16 +138,18 @@ impl Shell {
                 .py(px(12.))
                 .rounded(px(6.))
                 .bg(linear_gradient(90., linear_color_stop(c(b.from), 0.), linear_color_stop(c(b.to), 1.)))
-                .child(div().text_size(px(11.)).font_weight(FontWeight::SEMIBOLD).text_color(c(b.label)).child("NEXT UP"))
+                .child(div().text_size(px(BANNER_EYEBROW)).line_height(px(line_for(BANNER_EYEBROW))).font_weight(FontWeight::SEMIBOLD).text_color(c(b.label)).child("NEXT UP"))
                 .child(
                     div()
                         .mt(px(3.))
-                        .text_size(px(18.))
+                        .mb(px(1.))
+                        .text_size(px(BANNER_TITLE))
+                        .line_height(px(line_for(BANNER_TITLE)))
                         .font_weight(FontWeight::BOLD)
                         .text_color(c(b.value))
                         .child(n.title.clone()),
                 )
-                .child(div().text_size(px(12.)).text_color(c(b.secondary)).child(format!("{} · {}", n.relative, n.clock)))
+                .child(div().text_size(px(BANNER_META)).line_height(px(line_for(BANNER_META_LINE_OF))).text_color(c(b.secondary)).child(format!("{} · {}", n.relative, n.clock)))
                 .child(div().flex().child(button)),
         )
     }

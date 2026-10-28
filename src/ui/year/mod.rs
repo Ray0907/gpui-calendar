@@ -16,14 +16,14 @@ use gpui_kit::{
 use super::controls::{c, ring, shape_of, shape_sized, wash_hover};
 use super::shell::{CHROME_H as SHELL_CHROME_H, Shell};
 use crate::domain::month::grid_width;
-use crate::domain::year::{Cursor, DATE_BOX, DOT_GAP, DOT_PX, DayMarks, GRID_ROWS, MAX_COLS, MONTH_GAP, MORE_H, MonthGrid, columns_for, more_label, row_height, cursor_in, day_height, month_at, month_cell};
+use crate::domain::year::{Cursor, DATE_BOX, DOT_GAP, DOT_PX, DayMarks, GRID_ROWS, MAX_COLS, MONTH_GAP, MORE_H, ROW_GAP, MonthGrid, columns_for, more_label, row_height, cursor_in, day_height, month_at, month_cell};
 use cache::{Cache, Key};
 use crate::theme::contrast::Rgb;
 use crate::theme::resolve::Theme;
 
-/// Padding around the grid, and the gap between months.
+/// Padding around the grid. Month columns are `COL_GAP` apart and month rows `ROW_GAP`.
 const PAD: f32 = 24.;
-const GAP: f32 = MONTH_GAP;
+const COL_GAP: f32 = MONTH_GAP;
 /// What the window spends above and below the days: the shell's chrome and the grid's padding.
 const CHROME_H: f32 = SHELL_CHROME_H + 2. * PAD + RULE;
 /// The hairline under the header (the mock's grid border-top).
@@ -106,7 +106,7 @@ impl Shell {
         // Marker weeks grow by at most this much each (at the shortest day); the tallest month of each row bounds it.
         let grow: usize = (0..nrows).map(|r| (0..cols).filter_map(|col| month_at(r, col, cols)).map(|m| grids[m as usize - 1].marked_weeks(&cache.marks).into_iter().filter(|x| *x).count()).max().unwrap_or(0)).sum();
         let grow = grow as f32 * (row_height(DATE_BOX + DOT_PX, true) - DATE_BOX - DOT_PX);
-        let avail = f32::from(window.viewport_size().height) - CHROME_H - nrows as f32 * (MONTH_HEAD_H + GAP) + GAP - grow;
+        let avail = f32::from(window.viewport_size().height) - CHROME_H - nrows as f32 * MONTH_HEAD_H - nrows.saturating_sub(1) as f32 * ROW_GAP - grow;
         let day_h = day_height(avail, stacked);
         let rows: Vec<_> = (0..nrows)
             .map(|r| {
@@ -114,7 +114,7 @@ impl Shell {
                     Some(m) => self.year_month(t, year, &cache, &grids[m as usize - 1], (cursor, day_h), &weekdays, cx),
                     None => div().flex_1().min_w_0().into_any_element(),
                 });
-                div().flex().gap(px(GAP)).children(months).into_any_element()
+                div().flex().gap(px(COL_GAP)).children(months).into_any_element()
             })
             .collect();
         div()
@@ -160,7 +160,7 @@ impl Shell {
                     .p(px(PAD))
                     .flex()
                     .flex_col()
-                    .gap(px(GAP))
+                    .gap(px(ROW_GAP))
                     .children(rows),
             )
             .into_any_element()

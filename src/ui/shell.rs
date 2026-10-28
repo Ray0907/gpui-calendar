@@ -20,9 +20,9 @@ use crate::theme::resolve::Theme;
 pub const MIN_WINDOW: (f32, f32) = (960., 600.);
 pub const RAIL_BELOW: f32 = 1120.;
 /// Padding around the window's content and the gap between sidebar and card.
-const MARGIN: f32 = 16.;
+pub const SHELL_MARGIN: f32 = 12.;
 /// What the shell spends above and below a view's body: its margins and the header.
-pub const CHROME_H: f32 = 2. * MARGIN + super::header::HEADER_H;
+pub const CHROME_H: f32 = 2. * SHELL_MARGIN + super::header::HEADER_H;
 
 pub fn window_options() -> WindowOptions {
     WindowOptions {
@@ -291,8 +291,8 @@ impl Render for Shell {
             .size_full()
             .track_focus(&self.root)
             .flex()
-            .gap(px(MARGIN))
-            .p(px(MARGIN))
+            .gap(px(SHELL_MARGIN))
+            .p(px(SHELL_MARGIN))
             .bg(c(t.neutral.page))
             .text_color(c(t.neutral.t1))
             .text_size(px(13.))

@@ -108,6 +108,8 @@ pub fn day_name(date: NaiveDate, marks: Option<&DayMarks>) -> String {
 
 /// Gap between month columns.
 pub const MONTH_GAP: f32 = 24.;
+/// Gap between month rows (mock v8 `.yg` row gap).
+pub const ROW_GAP: f32 = 16.;
 
 /// Month columns for a grid `width` px wide: four while each month keeps 220px (gaps included),
 /// then three, two, one.

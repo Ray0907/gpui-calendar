@@ -17,6 +17,7 @@ use gpui_kit::{
     Pixels, Point, StatefulInteractiveElement, Styled, TestSupportExt, Window, canvas, div, point, px, prelude::*,
 };
 
+pub use self::geom::{LANE_H, lane_top};
 use self::geom::{Area, Bar, DayLayout, GRID_H, GUTTER_W, HOUR_H, Reach, all_day_bars, all_day_height, layout_day, minute_to_y, scroll_target};
 use super::controls::c;
 use super::shell::Shell;
@@ -55,6 +56,12 @@ impl Frame {
         self.layouts.iter().any(|l| l.blocks.iter().any(|b| b.id == id) || l.more.iter().any(|m| m.ids.contains(&id))) || self.bars.iter().any(|b| b.id == id)
     }
 }
+
+/// The date circle in a day header (mock v8 `.wh`), and the padding above and below it.
+pub const DATE_CIRCLE: f32 = 22.;
+pub const HEAD_PAD: f32 = 8.;
+/// A day header's height: the circle between its paddings.
+pub const HEAD_H: f32 = DATE_CIRCLE + 2. * HEAD_PAD;
 
 pub struct WeekView {
     pub(super) scroll: ScrollHandle,
@@ -157,7 +164,7 @@ impl Shell {
             .iter()
             .map(|&d| {
                 let today = d == self.model.today;
-                let num = div().min_w(px(24.)).h(px(24.)).flex().items_center().justify_center().rounded_full().font_weight(FontWeight::SEMIBOLD);
+                let num = div().min_w(px(DATE_CIRCLE)).h(px(DATE_CIRCLE)).flex().items_center().justify_center().rounded_full().font_weight(FontWeight::SEMIBOLD);
                 let num = if today { num.bg(c(t.accent)).text_color(c(t.accent_on)) } else { num.text_color(c(n.t1)) };
                 div()
                     .id(SharedString::from(format!("week-head-{d}")))
@@ -166,12 +173,12 @@ impl Shell {
                     .aria_label(d.format("%A, %B %-d").to_string())
                     .flex_1()
                     .min_w_0()
-                    .py(px(8.))
+                    .py(px(HEAD_PAD))
                     .flex()
                     .items_center()
                     .justify_center()
-                    .gap(px(6.))
-                    .child(div().text_size(px(12.)).font_weight(FontWeight::MEDIUM).text_color(c(n.t3)).child(d.format("%a").to_string()))
+                    .gap(px(3.))
+                    .child(div().text_size(px(13.)).text_color(c(n.t3)).child(d.format("%a").to_string()))
                     .child(num.child(d.format("%-d").to_string()))
                     .into_any_element()
             })
@@ -187,7 +194,7 @@ impl Shell {
             .border_t_1()
             .border_b_1()
             .border_color(c(n.line))
-            .child(div().w(px(GUTTER_W)).flex_none().pr(px(8.)).pt(px(8.)).flex().justify_end().text_size(px(12.)).text_color(c(n.t3)).child("All day"))
+            .child(div().id("week-all-day-label").test_support().w(px(GUTTER_W)).flex_none().pr(px(8.)).mt(px(lane_top(0))).h(px(LANE_H)).flex().items_center().justify_end().text_size(px(12.)).text_color(c(n.t3)).child("All day"))
             .child(
                 div()
                     .relative()

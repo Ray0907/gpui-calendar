@@ -5,7 +5,7 @@ use chrono::NaiveDate;
 use common::{at, open, open_with, tmp};
 use gpui_calendar::store::settings::{Accent, CalendarColor, Mode};
 use gpui_calendar::store::{PERSONAL, Store, WORK};
-use gpui_calendar::ui::{MIN_WINDOW, window_options};
+use gpui_calendar::ui::{SHELL_MARGIN, MIN_WINDOW, window_options};
 use gpui_kit::test::{TestQueryExt, TestWindowExt};
 use gpui_kit::{AppContext, TestAppContext, px, size};
 use std::{cell::Cell, rc::Rc, time::Duration};
@@ -14,6 +14,19 @@ use std::{cell::Cell, rc::Rc, time::Duration};
 fn window_minimum_is_960_by_600() {
     assert_eq!(window_options().window_min_size, Some(size(px(960.), px(600.))));
     assert_eq!(MIN_WINDOW, (960.0, 600.0));
+}
+
+#[gpui_kit::test]
+fn the_cards_sit_in_the_mocks_12px_margin(cx: &mut TestAppContext) {
+    assert_eq!(SHELL_MARGIN, 12., "mock v8 .app padding");
+    let (h, _) = open(cx, &tmp("margin"), 1440.);
+    cx.update_window(h, |_, w, _| {
+        let (side, main) = (w.find("sidebar").bounds(), w.find("main").bounds());
+        let view = w.viewport_size();
+        assert_eq!((side.left(), side.top(), view.height - side.bottom()), (px(SHELL_MARGIN), px(SHELL_MARGIN), px(SHELL_MARGIN)), "sidebar");
+        assert_eq!((main.top(), view.height - main.bottom(), view.width - main.right(), main.left() - side.right()), (px(SHELL_MARGIN), px(SHELL_MARGIN), px(SHELL_MARGIN), px(SHELL_MARGIN)), "main");
+    })
+    .unwrap();
 }
 
 #[gpui_kit::test]

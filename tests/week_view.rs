@@ -9,6 +9,7 @@ use common::{at, open_sized, open_week, tmp};
 use gpui_calendar::domain::event::Event;
 use gpui_calendar::store::{PERSONAL, SIDE, WORK};
 use gpui_calendar::ui::model::View;
+use gpui_calendar::ui::{BANNER_EYEBROW, BANNER_META_LINE_OF, BANNER_TITLE, DATE_CIRCLE, HEAD_H, LANE_H, line_for, lane_top};
 use gpui_kit::test::{TestEventExt, TestQueryExt, TestWindowExt};
 use gpui_kit::{AppContext, MouseButton, TestAppContext, px};
 
@@ -300,4 +301,47 @@ fn week_scroll_on_open_uses_the_viewport_of_the_new_days(cx: &mut TestAppContext
         assert!((scrolled - want).abs() < 1., "a third of the way down in the grid as it is now: {scrolled} vs {want}");
     })
     .unwrap();
+}
+
+#[gpui_kit::test]
+fn day_header_and_all_day_label_follow_mock_v8(cx: &mut TestAppContext) {
+    let (h, _) = open_week(cx, "day-head", View::Day, vec![]);
+    cx.update_window(h, |_, w, cx| {
+        w.render_frame(cx);
+        // .wh div: 8px padding around the date circle.
+        assert_eq!(HEAD_H, DATE_CIRCLE + 16.);
+        assert_eq!(w.find("week-head-2026-10-28").bounds().size.height, px(HEAD_H), "header height");
+        // .wad aligns "All day" to the row's middle; the row is 30 tall.
+        let (row, label) = (w.find("week-all-day").bounds(), w.find("week-all-day-label").bounds());
+        assert_eq!(label.center().y, row.top() + px(1. + lane_top(0) + LANE_H / 2.), "label centered on the first lane: border, pad, half a lane");
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn next_up_banner_is_as_tall_as_the_mocks(cx: &mut TestAppContext) {
+    let (h, _) = open_week(cx, "banner-h", View::Day, vec![timed(1, "Release", WORK, 28, 20, 0, 60)]);
+    cx.update_window(h, |_, w, cx| {
+        w.render_frame(cx);
+        // .banner: 12 pad, 11px eyebrow at 1.4, 3 + 18px title at 1.4 + 1, 12px line at 1.4 of 13, 10 + 32 button, 12 pad.
+        let want = 12. + line_for(BANNER_EYEBROW) + 3. + line_for(BANNER_TITLE) + 1. + line_for(BANNER_META_LINE_OF) + 10. + 32. + 12.;
+        let got = f32::from(w.find("banner").bounds().size.height);
+        assert!((got - want).abs() < 0.6, "banner height {got}, mock {want}");
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn all_day_label_stays_on_the_first_lane_with_two_and_three_lanes(cx: &mut TestAppContext) {
+    for n in [2u64, 3] {
+        let evs = (1..=n).map(|i| Event::all_day(i, "A", WORK, d(28), d(28))).collect();
+        let (h, _) = open_week(cx, &format!("lanes-{n}"), View::Day, evs);
+        cx.update_window(h, |_, w, cx| {
+            w.render_frame(cx);
+            let (row, label) = (w.find("week-all-day").bounds(), w.find("week-all-day-label").bounds());
+            assert_eq!(label.center().y, row.top() + px(1. + lane_top(0) + LANE_H / 2.), "{n} lanes: label on lane 0");
+            assert!(label.top() >= row.top() && label.bottom() <= row.bottom(), "{n} lanes: label inside the row");
+        })
+        .unwrap();
+    }
 }

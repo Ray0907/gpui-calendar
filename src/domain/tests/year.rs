@@ -131,7 +131,7 @@ fn columns_follow_the_width_with_the_gaps_counted() {
 
 #[test]
 fn the_mock_v8_year_metrics() {
-    assert_eq!((MONTH_GAP, DOT_GAP, GRID_ROWS), (24., 2., 6));
+    assert_eq!((MONTH_GAP, ROW_GAP, DOT_GAP, GRID_ROWS), (24., 16., 2., 6));
     assert!(year_grids(2026, Weekday::Mon).iter().all(|g| g.rows().count() == GRID_ROWS));
 }
 
