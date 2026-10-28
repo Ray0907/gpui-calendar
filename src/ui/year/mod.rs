@@ -13,20 +13,23 @@ use gpui_kit::{
     Role, ScrollHandle, SharedString, StatefulInteractiveElement, Styled, TestSupportExt, Window, div, px, prelude::*,
 };
 
-use super::controls::{c, ring, shape_of, shape_sized};
+use super::controls::{c, ring, shape_of, shape_sized, wash_hover};
 use super::shell::{CHROME_H as SHELL_CHROME_H, Shell};
 use crate::domain::month::grid_width;
-use crate::domain::year::{Cursor, DATE_BOX, DOT_GAP, DOT_PX, DayMarks, MAX_COLS, MONTH_GAP, MORE_H, MonthGrid, columns_for, more_label, row_height, cursor_in, day_height, month_at, month_cell};
+use crate::domain::year::{Cursor, DATE_BOX, DOT_GAP, DOT_PX, DayMarks, GRID_ROWS, MAX_COLS, MONTH_GAP, MORE_H, MonthGrid, columns_for, more_label, row_height, cursor_in, day_height, month_at, month_cell};
 use cache::{Cache, Key};
+use crate::theme::contrast::Rgb;
 use crate::theme::resolve::Theme;
 
 /// Padding around the grid, and the gap between months.
-const PAD: f32 = 16.;
+const PAD: f32 = 24.;
 const GAP: f32 = MONTH_GAP;
 /// What the window spends above and below the days: the shell's chrome and the grid's padding.
-const CHROME_H: f32 = SHELL_CHROME_H + 2. * PAD;
-/// A month's title (28) and weekday row (18).
-const MONTH_HEAD_H: f32 = 28. + 18.;
+const CHROME_H: f32 = SHELL_CHROME_H + 2. * PAD + RULE;
+/// The hairline under the header (the mock's grid border-top).
+const RULE: f32 = 1.;
+/// A month's title (28) and weekday row (24).
+const MONTH_HEAD_H: f32 = 28. + 24.;
 
 pub struct YearView {
     pub(super) focus: FocusHandle,
@@ -97,9 +100,9 @@ impl Shell {
         });
         let weekdays = self.model.mini_weekdays();
         let grids = &cache.grids;
-        // Week rows stacked down the page (the tallest month of each row): the day height fills the window.
+        // Week rows stacked down the page (every month has six): the day height fills the window.
         let nrows = 12usize.div_ceil(cols);
-        let stacked: usize = (0..nrows).map(|r| (0..cols).filter_map(|col| month_at(r, col, cols)).map(|m| grids[m as usize - 1].rows().count()).max().unwrap_or(0)).sum();
+        let stacked = nrows * GRID_ROWS;
         // Marker weeks grow by at most this much each (at the shortest day); the tallest month of each row bounds it.
         let grow: usize = (0..nrows).map(|r| (0..cols).filter_map(|col| month_at(r, col, cols)).map(|m| grids[m as usize - 1].marked_weeks(&cache.marks).into_iter().filter(|x| *x).count()).max().unwrap_or(0)).sum();
         let grow = grow as f32 * (row_height(DATE_BOX + DOT_PX, true) - DATE_BOX - DOT_PX);
@@ -118,6 +121,8 @@ impl Shell {
             .id("year")
             .test_support()
             .relative()
+            .border_t_1()
+            .border_color(c(t.neutral.line))
             .flex_1()
             .min_h_0()
             .flex()
@@ -186,46 +191,50 @@ impl Shell {
             .flex()
             .items_center()
             .rounded(px(6.))
-            .text_size(px(14.))
-            .font_weight(FontWeight::SEMIBOLD)
+            // The mock's PNG (v8) shows the title at the page's 13px, regular: its `font: inherit` button rule beats the 14px/600.
+            .text_size(px(13.))
+            .text_color(c(n.t1))
             .cursor_pointer()
+            .hover(|s| s.bg(wash_hover(n.t1, n.surface)))
             .active(|s| s.opacity(0.85))
-            .when(cursor == Some(Cursor::Title(year, month)), |s| s.child(self.year_ring(t, format!("year-ring-month-{year}-{month:02}"))))
+            .when(cursor == Some(Cursor::Title(year, month)), |s| s.child(self.year_ring(t, format!("year-ring-month-{year}-{month:02}"), n.surface)))
             .child(first.format("%B").to_string())
             .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
                 this.model.drill_month(year, month);
                 this.sync(cx);
             }));
         let head = div().flex().children(weekdays.iter().map(|w| {
-            div().flex_1().h(px(18.)).flex().items_center().justify_center().text_size(px(11.)).font_weight(FontWeight::SEMIBOLD).text_color(c(n.t3)).child(w.to_uppercase())
+            div().flex_1().h(px(24.)).flex().items_center().justify_center().text_size(px(11.)).font_weight(FontWeight::SEMIBOLD).text_color(c(n.t3)).child(w.to_uppercase())
         }));
         let marked = g.marked_weeks(&cache.marks);
         let rows = g.rows().zip(marked).map(|(row, has_more)| {
             let day_h = row_height(day_h, has_more);
-            let days = row.iter().map(|&d| if g.in_month(d) { self.year_day(t, d, cache, cursor == Some(Cursor::Day(d)), day_h, cx) } else { self.year_pad(t, d, day_h) });
+            let days = row.iter().map(|&d| if g.in_month(d) { self.year_day(t, d, cache, cursor == Some(Cursor::Day(d)), day_h, cx) } else { self.year_pad(t, g.month, d, day_h) });
             div().flex().children(days)
         });
         div().flex_1().min_w_0().flex().flex_col().child(title).child(head).children(rows).into_any_element()
     }
 
-    /// A date outside the month: shown dim for the week shape. It has no id, role or name: the real
-    /// button is in its own month.
-    fn year_pad(&self, t: &Theme, d: NaiveDate, day_h: f32) -> AnyElement {
+    /// A date outside the month: shown dim for the week shape. It has no role or name (the real button is in
+    /// its own month); its id is only for tests. It washes on hover like a day. The weekend band is square so it runs on unbroken.
+    fn year_pad(&self, t: &Theme, month: u32, d: NaiveDate, day_h: f32) -> AnyElement {
         let weekend = is_weekend(d);
+        let backdrop = if weekend { t.neutral.subtle } else { t.neutral.surface };
         let num = div().h(px(DATE_BOX)).flex().items_center().text_size(px(12.)).font_weight(FontWeight::MEDIUM).text_color(c(t.neutral.t3)).child(d.format("%-d").to_string());
-        div().flex_1().min_w_0().h(px(day_h)).flex().flex_col().items_center().rounded(px(6.)).when(weekend, |s| s.bg(c(t.neutral.subtle))).child(num).into_any_element()
+        div().id(SharedString::from(format!("year-pad-{month:02}-{d}"))).test_support().flex_1().min_w_0().h(px(day_h)).flex().flex_col().items_center().when(weekend, |s| s.bg(c(backdrop))).hover(|s| s.bg(wash_hover(t.neutral.t1, backdrop))).child(num).into_any_element()
     }
 
     /// The focus ring of the roving stop: an element of its own over the whole day or title, so it never
     /// reads as the today circle, and a headless test can tell where it is. It paints first, so the surface
-    /// fill that keeps the ring's shadow out of the interior sits under the content.
-    fn year_ring(&self, t: &Theme, id: String) -> AnyElement {
-        div().id(SharedString::from(id)).test_support().absolute().inset_0().rounded(px(6.)).bg(c(t.neutral.surface)).shadow(ring(c(t.neutral.surface), c(t.ring))).into_any_element()
+    /// fill that keeps the ring's shadow out of the interior sits under the content; it is the cell's own `backdrop`.
+    fn year_ring(&self, t: &Theme, id: String, backdrop: Rgb) -> AnyElement {
+        div().id(SharedString::from(id)).test_support().absolute().inset_0().rounded(px(6.)).bg(c(backdrop)).shadow(ring(c(backdrop), c(t.ring))).into_any_element()
     }
 
     fn year_day(&self, t: &Theme, date: NaiveDate, cache: &Cache, cursor: bool, day_h: f32, cx: &Context<Self>) -> AnyElement {
         let n = &t.neutral;
         let today = date == self.model.today;
+        let backdrop = if is_weekend(date) { n.subtle } else { n.surface };
         let marks = cache.marks.get(&date);
         self.year.buttons.set(self.year.buttons.get() + 1);
         let num = div()
@@ -268,11 +277,11 @@ impl Shell {
             .flex()
             .flex_col()
             .items_center()
-            .rounded(px(6.))
             .cursor_pointer()
+            .hover(|s| s.bg(wash_hover(n.t1, backdrop)))
             .active(|s| s.opacity(0.85))
             .when(is_weekend(date), |s| s.bg(c(n.subtle)))
-            .when(cursor, |s| s.child(self.year_ring(t, format!("year-ring-{date}"))))
+            .when(cursor, |s| s.child(self.year_ring(t, format!("year-ring-{date}"), backdrop)))
             .child(num)
             .child(dots)
             .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {

@@ -9,7 +9,7 @@ use gpui_kit::{
 };
 
 use super::a11y::Disabled;
-pub use crate::theme::gpui_adapter::{banner_scrim, banner_wash, elevation, hsla as c, on_color};
+pub use crate::theme::gpui_adapter::{banner_scrim, banner_wash, elevation, hsla as c, on_color, wash_hover};
 
 /// Guide 3 "Focus ring": 2px ring, 2px gap, drawn as two spread shadows so it follows the radius.
 const RING_PX: f32 = 2.;

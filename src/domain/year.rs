@@ -4,10 +4,10 @@ use std::collections::HashMap;
 
 use chrono::{Datelike, Duration, NaiveDate, Weekday};
 
-use super::dates::{DateRange, month_grid_range, year_range};
+use super::dates::{DateRange, month_grid_range, month_range, week_start_of, year_range};
 use super::event::{CalendarId, Event};
 
-/// One mini month: whole weeks covering the month, so out-of-month days pad the first and last row.
+/// One mini month: always six week rows (the mock's), so out-of-month days pad the first row and the tail.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MonthGrid {
     pub month: u32,
@@ -29,8 +29,12 @@ impl MonthGrid {
     }
 }
 
+/// Week rows of every month grid, and its days.
+pub const GRID_ROWS: usize = 6;
+const GRID_DAYS: usize = GRID_ROWS * 7;
+
 pub fn year_grids(year: i32, ws: Weekday) -> Vec<MonthGrid> {
-    (1..=12).map(|month| MonthGrid { month, days: month_grid_range(year, month, ws).days().collect() }).collect()
+    (1..=12).map(|month| MonthGrid { month, days: week_start_of(month_range(year, month).start, ws).iter_days().take(GRID_DAYS).collect() }).collect()
 }
 
 /// Dots a day shows at most; more calendars than this show a "+n" marker.
@@ -40,7 +44,7 @@ pub const MAX_DOTS: usize = 3;
 pub const DATE_BOX: f32 = 22.;
 /// Side of a dot (the mock's), which is also the height of the dot row, and the gap between dots.
 pub const DOT_PX: f32 = 5.;
-pub const DOT_GAP: f32 = 1.;
+pub const DOT_GAP: f32 = 2.;
 /// Line box of the "+n" marker: its 8px text needs more than the dot row.
 pub const MORE_H: f32 = 8.;
 /// Tallest a day grows (the mock's), and the most month columns.
@@ -103,7 +107,7 @@ pub fn day_name(date: NaiveDate, marks: Option<&DayMarks>) -> String {
 }
 
 /// Gap between month columns.
-pub const MONTH_GAP: f32 = 16.;
+pub const MONTH_GAP: f32 = 24.;
 
 /// Month columns for a grid `width` px wide: four while each month keeps 220px (gaps included),
 /// then three, two, one.

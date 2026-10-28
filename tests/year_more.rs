@@ -282,7 +282,7 @@ fn a_crowded_day_does_not_make_the_grid_taller_than_the_window(cx: &mut TestAppC
     // Every month of the October row has a marker, so whichever month is tallest grows.
     let at = |m: u32| d(2026, m, 11).and_hms_opt(9, 0, 0).unwrap();
     let evs = (9..=12).flat_map(|m| (0..14).map(move |c| Event::timed(m as u64 * 100 + c as u64, "N", c, at(m), at(m) + chrono::Duration::hours(1)))).collect();
-    let (h, _) = open_year_with(cx, "yearm-more-fit", (1440., 810.), evs);
+    let (h, _) = open_year_with(cx, "yearm-more-fit", (1440., 825.), evs);
     cx.update_window(h, |_, w, _| {
         let (view, first, last) = (w.find("year-scroll").bounds(), w.find("year-month-2026-01").bounds(), w.find("year-day-2026-12-31").bounds());
         assert!(first.top() >= view.top() && last.bottom() <= view.bottom(), "fits without scrolling with a marker: {first:?}..{last:?} in {view:?}");
@@ -299,6 +299,25 @@ fn dots_sit_at_the_same_height_on_days_with_and_without_a_marker(cx: &mut TestAp
     cx.update_window(h, |_, w, _| {
         let (marked, plain) = (w.find("year-dot-2026-10-14-0").bounds(), w.find("year-dot-2026-10-15-0").bounds());
         assert_eq!(marked.top(), plain.top(), "dots align across the week: {marked:?} vs {plain:?}");
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn every_month_shows_six_week_rows_and_the_padding_days_are_not_buttons(cx: &mut TestAppContext) {
+    let (h, _) = open_year(cx, "year-six-rows", 1440.);
+    cx.update_window(h, |_, w, _| {
+        // February 2026 starts on a Sunday: Jan 26 to Mar 1 is five rows, and Mar 2 to 8 is a sixth of padding.
+        let (feb_2, feb_28) = (w.find("year-day-2026-02-02").bounds(), w.find("year-day-2026-02-28").bounds());
+        let (pad_first, pad_last) = (w.find("year-pad-02-2026-03-02").bounds(), w.find("year-pad-02-2026-03-08").bounds());
+        assert!(pad_first.top() > feb_28.top() && pad_first.left() == feb_2.left(), "the padding starts a new row under the 28th: {pad_first:?}");
+        assert!(pad_last.top() == pad_first.top() && pad_last.left() > pad_first.left(), "and fills that row");
+        // Every month ends on the same row count, so each month block is the same height: Dec's last pad is 5 rows under its first row.
+        let (jan_1, jan_pad) = (w.find("year-day-2026-01-01").bounds(), w.find("year-pad-01-2026-02-08").bounds());
+        assert!(jan_pad.bottom() - jan_1.top() > feb_2.size.height * 5., "six rows tall: {jan_1:?} to {jan_pad:?}");
+        assert!(w.try_find("year-pad-01-2026-01-31").is_none(), "an in-month day is a button, not a pad");
+        let view = w.find("year-scroll").bounds();
+        assert!(w.find("year-pad-12-2027-01-10").bounds().bottom() <= view.bottom(), "six rows still fit at 1440x900 without scrolling");
     })
     .unwrap();
 }

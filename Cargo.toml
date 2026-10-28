@@ -36,3 +36,7 @@ harness = false
 [[test]]
 name = "ax_audit"
 harness = false
+
+[[test]]
+name = "year_hover"
+harness = false

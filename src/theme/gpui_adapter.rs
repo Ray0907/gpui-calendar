@@ -11,8 +11,13 @@
 use gpui_kit::base::ColorTokens;
 use gpui_kit::{BoxShadow, Hsla, point, px, rgb};
 
-use super::contrast::Rgb;
+use super::contrast::{Rgb, over};
 use super::resolve::Theme;
+
+/// `wash-hover` (design-tokens 2): `fg` (t1) at 6% over the control's backdrop.
+pub fn wash_hover(fg: Rgb, backdrop: Rgb) -> Hsla {
+    hsla(over(fg, 0.06, backdrop))
+}
 
 pub fn hsla(c: Rgb) -> Hsla {
     rgb(c.to_u32()).into()

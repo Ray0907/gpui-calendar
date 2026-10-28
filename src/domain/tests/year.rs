@@ -21,13 +21,29 @@ fn a_year_has_twelve_grids_of_whole_weeks() {
         assert_eq!(m.days[0].weekday(), Weekday::Mon, "starts on the week start");
         assert!(m.days.contains(&d(2026, m.month, 1)));
     }
-    // October 2026 starts on a Thursday: Sep 28 to Nov 1 is five Monday-first weeks.
-    assert_eq!(g[9].days.len(), 35);
+    // October 2026 starts on a Thursday: Sep 28 to Nov 1 is five weeks, and a sixth of Nov 2 to 8 pads it.
+    assert_eq!(g[9].days.len(), 42);
     assert_eq!(g[9].days[0], d(2026, 9, 28));
-    assert_eq!(g[9].rows().count(), 5);
+    assert_eq!(g[9].days[41], d(2026, 11, 8));
     assert!(g[9].in_month(d(2026, 10, 31)) && !g[9].in_month(d(2026, 11, 1)));
-    // February 2027 is exactly four weeks starting Monday the 1st.
-    assert_eq!(year_grids(2027, Weekday::Mon)[1].days.len(), 28);
+}
+
+#[test]
+fn every_month_is_padded_to_six_week_rows_with_next_month_days() {
+    for ws in [Weekday::Mon, Weekday::Sun] {
+        for year in [2026, 2027, 2028] {
+            for m in year_grids(year, ws) {
+                assert_eq!((m.days.len(), m.rows().count()), (42, 6), "{year}-{} ({ws:?})", m.month);
+                assert!(m.days.windows(2).all(|w| w[1] == w[0].succ_opt().unwrap()), "consecutive days");
+                let (first, last) = (m.days.iter().position(|x| m.in_month(*x)).unwrap(), m.days.iter().rposition(|x| m.in_month(*x)).unwrap());
+                assert!(first < 7, "the month starts in the first row");
+                assert!(m.days[..first].iter().all(|x| x.month() != m.month) && m.days[last + 1..].iter().all(|x| x.month() != m.month));
+            }
+        }
+    }
+    // February 2027 is exactly four weeks starting Monday the 1st: two full rows of March pad it.
+    let feb = &year_grids(2027, Weekday::Mon)[1];
+    assert_eq!((feb.days[0], feb.days[41]), (d(2027, 2, 1), d(2027, 3, 14)));
 }
 
 #[test]
@@ -101,16 +117,22 @@ fn day_names_carry_the_date_and_the_count() {
 
 #[test]
 fn columns_follow_the_width_with_the_gaps_counted() {
-    assert_eq!(columns_for(1124.), 4, "the 1440 window with its sidebar");
-    assert_eq!((columns_for(928.), columns_for(927.)), (4, 3), "four months of 220 with three gaps are 928");
+    assert_eq!(columns_for(1076.), 4, "the 1440 window with its sidebar and the 24 padding");
+    assert_eq!((columns_for(952.), columns_for(951.)), (4, 3), "four months of 220 with three 24 gaps are 952");
     assert_eq!(columns_for(2000.), 4, "never more than four");
-    assert_eq!(columns_for(848.), 3, "the 960 window with a rail");
-    // Three months of 220 with two 16 gaps are 692; two are 456; one is 220.
-    assert_eq!((columns_for(692.), columns_for(691.)), (3, 2));
-    assert_eq!((columns_for(456.), columns_for(455.)), (2, 1));
+    assert_eq!(columns_for(800.), 3, "the 960 window with a rail");
+    // Three months of 220 with two 24 gaps are 708; two are 464; one is 220.
+    assert_eq!((columns_for(708.), columns_for(707.)), (3, 2));
+    assert_eq!((columns_for(464.), columns_for(463.)), (2, 1));
     assert_eq!((columns_for(220.), columns_for(0.)), (1, 1));
     assert_eq!(columns_for(660.), 2, "660 cannot hold three 220 months and the gaps");
     assert_eq!(columns_for(440.), 1, "440 is two months without the gap");
+}
+
+#[test]
+fn the_mock_v8_year_metrics() {
+    assert_eq!((MONTH_GAP, DOT_GAP, GRID_ROWS), (24., 2., 6));
+    assert!(year_grids(2026, Weekday::Mon).iter().all(|g| g.rows().count() == GRID_ROWS));
 }
 
 #[test]
@@ -225,6 +247,6 @@ fn marked_weeks_flags_the_week_rows_that_hold_a_plus_marker() {
     let crowd: Vec<Event> = (0..5).map(|c| Event::timed(c as u64 + 1, "E", c, at(10, 14, 9), at(10, 14, 10))).collect();
     let marks = day_marks(&crowd.iter().collect::<Vec<_>>(), 2026);
     let oct = year_grids(2026, Weekday::Mon).remove(9);
-    assert_eq!(oct.marked_weeks(&marks), vec![false, false, true, false, false], "Oct 14 is in the third row");
+    assert_eq!(oct.marked_weeks(&marks), vec![false, false, true, false, false, false], "Oct 14 is in the third row");
     assert_eq!(year_grids(2026, Weekday::Mon)[0].marked_weeks(&marks).iter().filter(|m| **m).count(), 0);
 }
