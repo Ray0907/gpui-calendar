@@ -80,6 +80,9 @@ impl Shell {
             .py(px(12.))
             .child(
                 div()
+                    .id("header-title")
+                    .test_support()
+                    .aria_label(format!("{month} {year}"))
                     .flex_1()
                     .flex()
                     .items_baseline()

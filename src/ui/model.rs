@@ -2,6 +2,9 @@
 //! drive them directly. Every appearance or visibility change is applied to the store and saved.
 
 mod merge;
+mod month;
+
+pub use month::NEW_EVENT_TITLE;
 
 use std::io;
 use std::path::PathBuf;

@@ -6,6 +6,7 @@ mod appearance;
 mod controls;
 mod header;
 pub mod model;
+mod month;
 mod shell;
 mod sidebar;
 

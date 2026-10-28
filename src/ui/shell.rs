@@ -10,7 +10,7 @@ use gpui_kit::{
 };
 
 use super::controls::{c, control, elevation};
-use super::model::{Model, NO_PATH, Screen, load_note_text};
+use super::model::{Model, NO_PATH, Screen, View, load_note_text};
 use crate::store::Store;
 use crate::theme::gpui_adapter::color_tokens;
 use crate::theme::resolve::Theme;
@@ -47,6 +47,7 @@ pub struct Shell {
     /// The theme last handed to gpui-kit, so unchanged frames do not push it again.
     pushed: Option<Theme>,
     pushes: usize,
+    pub(super) month: super::month::MonthView,
 }
 
 impl Shell {
@@ -75,7 +76,9 @@ impl Shell {
     pub fn new(store: Store, path: Option<std::path::PathBuf>, clock: Clock, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let dark = is_dark(window.appearance());
         let now = clock();
-        let shell = Self { model: Model::new(store, path, now.date(), now.time(), dark), clock, pushed: None, pushes: 0 };
+        let model = Model::new(store, path, now.date(), now.time(), dark);
+        let month = super::month::MonthView::new(now.date(), model.week_start(), cx);
+        let shell = Self { model, clock, pushed: None, pushes: 0, month };
         cx.observe_window_appearance(window, |this, window, cx| {
             this.model.system_dark = is_dark(window.appearance());
             this.sync(cx);
@@ -188,15 +191,21 @@ impl Render for Shell {
         let notice = self.notice_bar(&t, window, cx);
         let main = match self.model.screen {
             Screen::Appearance => self.appearance_screen(&t, window, cx).into_any_element(),
-            Screen::Calendar => div()
-                .w_full()
-                .flex_1()
-                .min_h_0()
-                .flex()
-                .flex_col()
-                .child(self.header(&t, window, cx))
-                .child(div().id("main-content").flex_1())
-                .into_any_element(),
+            Screen::Calendar => {
+                let month = (self.model.view == View::Month).then(|| {
+                    self.month_sync();
+                    self.month_view(&t, narrow, window, cx)
+                });
+                div()
+                    .w_full()
+                    .flex_1()
+                    .min_h_0()
+                    .flex()
+                    .flex_col()
+                    .child(self.header(&t, window, cx))
+                    .child(month.unwrap_or_else(|| div().id("main-content").flex_1().into_any_element()))
+                    .into_any_element()
+            }
         };
         div()
             .size_full()
