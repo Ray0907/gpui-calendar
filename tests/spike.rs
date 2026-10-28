@@ -20,7 +20,7 @@ fn drag_on_cell_records_down_move_up(cx: &mut TestAppContext) {
         .expect("open window");
         (w, v)
     });
-    cx.update_window(handle.into(), |_, window, cx| {
+    cx.update_window(handle, |_, window, cx| {
         window.render_frame(cx);
         let b = window.find("cell").bounds();
         assert_eq!(b.size.width, px(200.));

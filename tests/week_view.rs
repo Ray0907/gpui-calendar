@@ -34,7 +34,7 @@ fn week_header_shows_the_range_and_prev_next_today_step_by_week(cx: &mut TestApp
     assert_eq!(title(cx, h), "Oct – Nov 2026");
     cx.update_window(h, |_, w, cx| {
         assert_eq!(w.find("view-week").checked(), Some(true));
-        assert!(w.try_find("nav-next").is_some_and(|n| n.label() == Some("Next week".into())));
+        assert!(w.try_find("nav-next").is_some_and(|n| n.label() == Some("Next week")));
         w.click("nav-next", cx);
     })
     .unwrap();
@@ -53,7 +53,7 @@ fn week_header_shows_the_range_and_prev_next_today_step_by_week(cx: &mut TestApp
         w.render_frame(cx);
         assert_eq!(w.find("header-title").label().unwrap(), "Wed 28 Oct 2026", "Day view names the day");
         assert!(w.try_find("week-col-2026-10-28").is_some() && w.try_find("week-col-2026-10-29").is_none());
-        assert_eq!(w.find("nav-next").label(), Some("Next day".into()));
+        assert_eq!(w.find("nav-next").label(), Some("Next day"));
     })
     .unwrap();
 }

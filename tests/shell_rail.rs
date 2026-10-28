@@ -3,7 +3,7 @@ mod common;
 
 use common::{open, tmp};
 use gpui_calendar::store::Saved;
-use gpui_kit::test::{TestQueryExt, TestWindowExt};
+use gpui_kit::test::TestWindowExt;
 use gpui_kit::{AppContext, TestAppContext, px};
 
 fn sidebar_width(cx: &mut TestAppContext, name: &str, w: f32) -> gpui_kit::Pixels {

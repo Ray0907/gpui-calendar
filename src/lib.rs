@@ -3,6 +3,11 @@ pub mod store;
 pub mod theme;
 pub mod ui;
 
+/// Icon source for the real app and the headless shots, so the two cannot drift.
+pub fn assets() -> gpui_kit::assets::Assets {
+    gpui_kit::assets::Assets
+}
+
 use gpui_kit::{Context, IntoElement, Render, TestSupportExt, Window, div, prelude::*};
 
 /// Spike view: a draggable-target "grid" cell used to prove headless drag and layout.

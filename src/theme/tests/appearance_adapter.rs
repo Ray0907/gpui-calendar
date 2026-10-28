@@ -1,4 +1,4 @@
-use crate::store::settings::{Appearance, Mode, Neutral};
+use crate::store::settings::{Appearance, Mode};
 use crate::theme::contrast::Rgb;
 use crate::theme::gpui_adapter::{color_tokens, hsla};
 use crate::theme::palette::NEUTRALS;

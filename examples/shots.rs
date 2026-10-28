@@ -10,7 +10,7 @@ fn main() {
     use gpui_calendar::ui::Shell;
     use gpui_calendar::ui::model::View;
     use gpui_kit::test::TestWindowExt;
-    use gpui_kit::{AppContext, Bounds, HeadlessAppContext, WindowBounds, WindowOptions, assets::Assets, px, size};
+    use gpui_kit::{AppContext, Bounds, HeadlessAppContext, WindowBounds, WindowOptions, px, size};
 
     let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/artifacts");
     std::fs::create_dir_all(dir).expect("create artifacts dir");
@@ -33,7 +33,7 @@ fn main() {
     ] {
         let mut cx = HeadlessAppContext::with_platform(
             gpui_kit::platform::current_platform(true).text_system(),
-            Arc::new(Assets),
+            Arc::new(gpui_calendar::assets()),
             gpui_kit::platform::current_headless_renderer,
         );
         cx.update(gpui_kit::init);
