@@ -48,6 +48,7 @@ pub struct Shell {
     pushed: Option<Theme>,
     pushes: usize,
     pub(super) month: super::month::MonthView,
+    pub(super) week: super::week::WeekView,
 }
 
 impl Shell {
@@ -78,7 +79,8 @@ impl Shell {
         let now = clock();
         let model = Model::new(store, path, now.date(), now.time(), dark);
         let month = super::month::MonthView::new(now.date(), model.week_start(), cx);
-        let shell = Self { model, clock, pushed: None, pushes: 0, month };
+        let week = super::week::WeekView::new(cx);
+        let shell = Self { model, clock, pushed: None, pushes: 0, month, week };
         cx.observe_window_appearance(window, |this, window, cx| {
             this.model.system_dark = is_dark(window.appearance());
             this.sync(cx);
@@ -192,10 +194,17 @@ impl Render for Shell {
         let main = match self.model.screen {
             Screen::Appearance => self.appearance_screen(&t, window, cx).into_any_element(),
             Screen::Calendar => {
-                let month = (self.model.view == View::Month).then(|| {
-                    self.month_sync();
-                    self.month_view(&t, narrow, window, cx)
-                });
+                if !matches!(self.model.view, View::Day | View::Week) {
+                    self.week.closed();
+                }
+                let body = match self.model.view {
+                    View::Month => {
+                        self.month_sync();
+                        self.month_view(&t, narrow, window, cx)
+                    }
+                    View::Day | View::Week => self.week_view(&t, window, cx),
+                    View::Year => div().id("main-content").flex_1().into_any_element(),
+                };
                 div()
                     .w_full()
                     .flex_1()
@@ -203,7 +212,7 @@ impl Render for Shell {
                     .flex()
                     .flex_col()
                     .child(self.header(&t, window, cx))
-                    .child(month.unwrap_or_else(|| div().id("main-content").flex_1().into_any_element()))
+                    .child(body)
                     .into_any_element()
             }
         };

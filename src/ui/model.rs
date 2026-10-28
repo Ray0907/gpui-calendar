@@ -3,6 +3,7 @@
 
 mod merge;
 mod month;
+mod week;
 
 pub use month::NEW_EVENT_TITLE;
 
@@ -422,6 +423,9 @@ impl Model {
 
     /// Month in `text-1` and year in `text-3`.
     pub fn title(&self) -> (String, String) {
+        if matches!(self.view, View::Day | View::Week) {
+            return self.week_title();
+        }
         (self.anchor.format("%B").to_string(), self.anchor.year().to_string())
     }
 

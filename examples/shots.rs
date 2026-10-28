@@ -8,18 +8,22 @@ fn main() {
     use gpui_calendar::store::Store;
     use gpui_calendar::store::settings::Mode;
     use gpui_calendar::ui::Shell;
+    use gpui_calendar::ui::model::View;
     use gpui_kit::test::TestWindowExt;
     use gpui_kit::{AppContext, Bounds, HeadlessAppContext, WindowBounds, WindowOptions, assets::Assets, px, size};
 
     let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/artifacts");
     std::fs::create_dir_all(dir).expect("create artifacts dir");
-    // (file, mode, show the Appearance screen, busy month sample)
-    for (file, mode, appearance, busy) in [
-        ("shell-light", Mode::Light, false, false),
-        ("shell-dark", Mode::Dark, false, false),
-        ("appearance-light", Mode::Light, true, false),
-        ("month-light", Mode::Light, false, true),
-        ("month-dark", Mode::Dark, false, true),
+    // (file, mode, show the Appearance screen, view, sample events, clock)
+    for (file, mode, appearance, view, sample, (h, m)) in [
+        ("shell-light", Mode::Light, false, View::Month, Sample::Seed, (17, 35)),
+        ("shell-dark", Mode::Dark, false, View::Month, Sample::Seed, (17, 35)),
+        ("appearance-light", Mode::Light, true, View::Month, Sample::Seed, (17, 35)),
+        ("month-light", Mode::Light, false, View::Month, Sample::Month, (17, 35)),
+        ("month-dark", Mode::Dark, false, View::Month, Sample::Month, (17, 35)),
+        ("week-light", Mode::Light, false, View::Week, Sample::Week, (11, 20)),
+        ("week-dark", Mode::Dark, false, View::Week, Sample::Week, (11, 20)),
+        ("day-light", Mode::Light, false, View::Day, Sample::Week, (11, 20)),
     ] {
         let mut cx = HeadlessAppContext::with_platform(
             gpui_kit::platform::current_platform(true).text_system(),
@@ -29,10 +33,12 @@ fn main() {
         cx.update(gpui_kit::init);
         let mut store = Store::default();
         store.settings.appearance.mode = mode;
-        if busy {
-            store.events = busy_month();
+        match sample {
+            Sample::Seed => {}
+            Sample::Month => store.events = busy_month(),
+            Sample::Week => store.events = busy_week(),
         }
-        let now = NaiveDate::from_ymd_opt(2026, 10, 28).expect("date").and_hms_opt(17, 35, 0).expect("time");
+        let now = NaiveDate::from_ymd_opt(2026, 10, 28).expect("date").and_hms_opt(h, m, 0).expect("time");
         let opts = WindowOptions {
             window_bounds: Some(WindowBounds::Windowed(Bounds { origin: Default::default(), size: size(px(1440.), px(900.)) })),
             focus: false,
@@ -42,14 +48,15 @@ fn main() {
         let (handle, shell) = cx
             .update(|cx| gpui_kit::open_window(opts, cx, |window, cx| cx.new(|cx| Shell::new(store, None, Box::new(move || now), window, cx))))
             .expect("open window");
-        if appearance {
-            cx.update(|cx| shell.update(cx, |s, cx| {
+        cx.update(|cx| shell.update(cx, |s, cx| {
+            s.model.set_view(view);
+            if appearance {
                 s.model.toggle_appearance();
-                s.sync(cx);
-            }));
-        }
-        // The first frame lays the list out and applies the scroll to the month; the second draws it.
-        for _ in 0..2 {
+            }
+            s.sync(cx);
+        }));
+        // The first frame lays the list out and applies the scroll to the month or the grid; the next draw it.
+        for _ in 0..4 {
             cx.update_window(handle, |_, w, cx| w.render_frame(cx)).expect("render");
         }
         let image = cx.capture_screenshot(handle).expect("offscreen rendering");
@@ -91,5 +98,47 @@ fn busy_month() -> Vec<gpui_calendar::domain::event::Event> {
         Event::timed(15, "Late deploy window", WORK, at(30, 22, 0), at(31, 1, 0)),
         Event::all_day(16, "Conference", WORK, day(29), NaiveDate::from_ymd_opt(2026, 11, 2).expect("date")),
         timed(17, "Garden shed", SIDE, 31, 10, 0, 180),
+    ]
+}
+
+#[cfg(target_os = "macos")]
+#[derive(Clone, Copy)]
+enum Sample {
+    Seed,
+    Month,
+    Week,
+}
+
+/// Invented week of Oct 26: overlaps, a third overlap (the "+1 more" block), a bar across two days and a pill.
+#[cfg(target_os = "macos")]
+fn busy_week() -> Vec<gpui_calendar::domain::event::Event> {
+    use chrono::NaiveDate;
+    use gpui_calendar::domain::event::Event;
+    use gpui_calendar::store::{PERSONAL, SIDE, WORK};
+    let day = |d| NaiveDate::from_ymd_opt(2026, 10, d).expect("date");
+    let timed = |id, title, cal, d, h, m, mins| {
+        let start = day(d).and_hms_opt(h, m, 0).expect("time");
+        Event::timed(id, title, cal, start, start + chrono::Duration::minutes(mins))
+    };
+    vec![
+        Event::all_day(1, "Offsite", WORK, day(27), day(28)),
+        Event::all_day(2, "Anna's birthday", PERSONAL, day(31), day(31)),
+        timed(3, "Daily stand-up", WORK, 26, 9, 30, 30),
+        timed(4, "Sprint planning", WORK, 26, 10, 0, 90),
+        timed(5, "Focus time", SIDE, 27, 9, 0, 120),
+        timed(6, "Stand-up", WORK, 27, 9, 30, 15),
+        timed(7, "Code review", PERSONAL, 27, 10, 0, 60),
+        timed(8, "Planning notes", WORK, 27, 10, 15, 30),
+        timed(9, "Product sync", WORK, 27, 13, 0, 60),
+        timed(10, "Marketing", WORK, 27, 13, 45, 90),
+        timed(11, "Daily stand-up", WORK, 28, 9, 30, 30),
+        timed(12, "Design review", WORK, 28, 14, 0, 60),
+        timed(13, "Daily stand-up", WORK, 29, 9, 30, 30),
+        timed(14, "1:1 with Sam", WORK, 29, 11, 0, 30),
+        timed(15, "Lunch with Maria", PERSONAL, 29, 12, 30, 60),
+        timed(16, "Sprint retro", WORK, 30, 16, 0, 45),
+        timed(17, "Ship weekly update", SIDE, 30, 16, 30, 30),
+        timed(18, "Long run", PERSONAL, 31, 8, 0, 60),
+        timed(19, "Water plants", PERSONAL, 31, 10, 0, 30),
     ]
 }

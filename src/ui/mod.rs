@@ -9,6 +9,7 @@ pub mod model;
 mod month;
 mod shell;
 mod sidebar;
+mod week;
 
 pub use shell::{Clock, MIN_WINDOW, RAIL_BELOW, Shell, local_clock, window_options};
 
