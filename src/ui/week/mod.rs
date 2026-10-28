@@ -262,6 +262,8 @@ impl Shell {
                 div()
                     .id("week-scroll")
                     .test_support()
+                    .role(Role::Group)
+                    .aria_label(format!("{} grid", self.model.view.name()))
                     .flex_1()
                     .min_h_0()
                     .overflow_y_scroll()

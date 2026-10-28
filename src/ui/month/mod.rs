@@ -161,6 +161,8 @@ impl Shell {
                 div()
                     .id("month-scroll")
                     .test_support()
+                    .role(Role::Group)
+                    .aria_label("Month grid")
                     .flex_1()
                     .min_h_0()
                     // One Tab stop for the whole grid; the arrow keys move inside it.

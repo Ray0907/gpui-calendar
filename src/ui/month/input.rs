@@ -1,12 +1,13 @@
 //! Month pointer and keyboard input: drag to create across days, drag a chip to move it,
 //! arrow keys through the events.
 
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use gpui_kit::{Context, Pixels, Point, ScrollStrategy, Window};
 
 use super::{MonthDrag, WEEK_H};
 use crate::domain::drag::{Drag, Pos};
 use crate::domain::month::{enter, neighbor, reading_order};
+use crate::ui::model::Command;
 use crate::ui::popover::Origin;
 use crate::ui::shell::Shell;
 
@@ -83,11 +84,22 @@ impl Shell {
         };
         let events = self.model.visible_events();
         let order = reading_order(&events);
-        let next = match self.month.roving.filter(|id| order.contains(id)) {
+        let cur = self.month.roving.filter(|id| order.contains(id));
+        let next = match cur {
             Some(cur) => neighbor(&order, cur, forward),
             None => enter(&events, self.model.anchor_month(), forward),
         };
-        let Some(id) = next else { return false };
+        // Left/Right stay inside the shown month: its first/last event is the edge, not the grid's.
+        let horizontal = key == "left" || key == "right";
+        let month = self.model.anchor_month();
+        let shown = |id: u64| events.iter().find(|e| e.id == id).is_some_and(|e| (e.start.year(), e.start.month()) == month);
+        let Some(id) = next.filter(|&id| Some(id) != cur && (!horizontal || shown(id))) else {
+            // At the edge of the month the same arrow steps the period; vertical arrows have nowhere to go.
+            if horizontal {
+                self.run(Command::Step(if forward { 1 } else { -1 }), cx);
+            }
+            return true;
+        };
         self.month.roving = Some(id);
         let week = events.iter().find(|e| e.id == id).map(|e| self.month.weeks.index_of(e.start.date()));
         if let Some(ix) = week.filter(|&ix| !self.week_in_view(ix)) {

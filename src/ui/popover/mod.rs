@@ -152,13 +152,19 @@ impl Shell {
     }
 
     /// A new event at `start` (the Add button's default when `None`) on the first calendar that is on.
-    pub(super) fn open_new(&mut self, anchor_key: &str, from: Origin, window: &mut Window, cx: &mut Context<Self>) {
-        // With every calendar switched off a new event could not be seen: nothing opens.
-        let Some(calendar) = self.model.new_event_calendar() else { return };
+    /// `true` if the form opened.
+    pub(super) fn open_new(&mut self, anchor_key: &str, from: Origin, window: &mut Window, cx: &mut Context<Self>) -> bool {
+        // With every calendar switched off a new event could not be seen: nothing opens, and the notice says why.
+        let Some(calendar) = self.model.new_event_calendar() else {
+            self.model.warn("Every calendar is hidden. Turn one on to add an event.".into());
+            cx.notify();
+            return false;
+        };
         let start = self.model.new_event_start();
         let draft = Draft::new_at(start, calendar, self.model.store.settings.time_format.hour24());
         let anchor = self.anchor_for(anchor_key, from);
         self.open_form(draft, anchor, from, window, cx);
+        true
     }
 
     /// The banner's "Open event".
@@ -203,6 +209,10 @@ impl Shell {
             }));
         }
         self.pop_seq += 1;
+        self.clear_fields();
+        for field in [&inputs.title, &inputs.start_date, &inputs.start_time, &inputs.end_date, &inputs.end_time] {
+            self.register_field(gpui_kit::Focusable::focus_handle(field, cx));
+        }
         let trap = cx.focus_handle();
         inputs.title.update(cx, |s, cx| s.focus(window, cx));
         self.pop = Some(Form {
@@ -223,6 +233,7 @@ impl Shell {
     /// Close without saving; focus goes back to where it was.
     pub fn close_popover(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let Some(f) = self.pop.take() else { return };
+        self.clear_fields();
         f.return_to.unwrap_or_else(|| self.grid_focus()).focus(window, cx);
         cx.notify();
     }

@@ -8,6 +8,11 @@ pub fn assets() -> gpui_kit::assets::Assets {
     gpui_kit::assets::Assets
 }
 
+/// An on/off environment flag: unset, blank, "0" and "false" (any case, surrounding whitespace ignored) are off.
+pub fn env_flag(v: Option<&std::ffi::OsStr>) -> bool {
+    v.is_some_and(|v| !["", "0", "false"].iter().any(|off| v.to_string_lossy().trim().eq_ignore_ascii_case(off)))
+}
+
 use gpui_kit::{Context, IntoElement, Render, TestSupportExt, Window, div, prelude::*};
 
 /// Spike view: a draggable-target "grid" cell used to prove headless drag and layout.
@@ -59,5 +64,20 @@ impl Render for Spike {
                 )
                 .child("calendar spike"),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::env_flag;
+
+    #[test]
+    fn only_a_real_value_turns_a_flag_on() {
+        for off in [None, Some(""), Some("0"), Some("false"), Some("FALSE"), Some(" 0"), Some("0\n"), Some("  ")] {
+            assert!(!env_flag(off.map(std::ffi::OsStr::new)), "{off:?}");
+        }
+        for on in ["1", "true", "yes"] {
+            assert!(env_flag(Some(std::ffi::OsStr::new(on))), "{on}");
+        }
     }
 }

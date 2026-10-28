@@ -2,12 +2,12 @@
 
 use gpui_kit::component::IconName;
 use gpui_kit::{
-    ClickEvent, Context, FontWeight, InteractiveElement, IntoElement, ParentElement, Role, StatefulInteractiveElement, Styled, TestSupportExt,
+    ClickEvent, Context, FontWeight, InteractiveElement, IntoElement, KeyDownEvent, ParentElement, Role, StatefulInteractiveElement, Styled, TestSupportExt,
     Toggled, Window, div, px, prelude::*,
 };
 
 use super::controls::{c, control, elevation, icon};
-use super::model::View;
+use super::model::{Command, View};
 use super::shell::Shell;
 use crate::theme::resolve::Theme;
 
@@ -36,8 +36,7 @@ impl Shell {
                     .aria_toggled(if on { Toggled::True } else { Toggled::False })
                     .child(v.name())
                     .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
-                        this.model.set_view(v);
-                        this.sync(cx);
+                        this.run(Command::Show(v), cx);
                     }))
             })
             .collect();
@@ -54,8 +53,7 @@ impl Shell {
                 .bg(c(n.page))
                 .child(icon(ic, c(n.t1), 16.))
                 .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
-                    this.model.step(dir);
-                    this.sync(cx);
+                    this.run(Command::Step(dir), cx);
                 }))
         };
         let prev = step("nav-prev", prev_name, IconName::ChevronLeft, -1, window, cx);
@@ -71,8 +69,7 @@ impl Shell {
             .font_weight(FontWeight::MEDIUM)
             .child("Today")
             .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
-                this.model.go_today();
-                this.sync(cx);
+                this.run(Command::Today, cx);
             }));
         div()
             .id("header")
@@ -100,6 +97,12 @@ impl Shell {
             .child(
                 div()
                     .id("view-switch")
+                    // A segmented control owns Left and Right while it has focus: they never step the period.
+                    .on_key_down(|e: &KeyDownEvent, _, cx| {
+                        if !e.keystroke.modifiers.modified() && matches!(e.keystroke.key.as_str(), "left" | "right") {
+                            cx.stop_propagation();
+                        }
+                    })
                     .flex()
                     .gap(px(2.))
                     .p(px(3.))

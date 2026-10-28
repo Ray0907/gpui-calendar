@@ -135,6 +135,8 @@ impl Shell {
                 div()
                     .id("year-scroll")
                     .test_support()
+                    .role(Role::Group)
+                    .aria_label("Year grid")
                     .flex_1()
                     .min_h_0()
                     .overflow_y_scroll()

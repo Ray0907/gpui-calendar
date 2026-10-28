@@ -8,6 +8,7 @@ use super::WeekDrag;
 use crate::domain::drag::{Drag, Pos};
 use crate::domain::event::Event;
 use crate::domain::month::{neighbor, reading_order};
+use crate::ui::model::Command;
 use crate::ui::popover::Origin;
 use crate::ui::shell::Shell;
 
@@ -146,12 +147,19 @@ impl Shell {
         let shown = self.model.shown_days();
         let events: Vec<&Event> = self.model.visible_events().into_iter().filter(|e| e.days().start < shown.end && e.days().end > shown.start).collect();
         let order = reading_order(&events);
-        let next = match self.week.roving.filter(|id| order.contains(id)) {
+        let cur = self.week.roving.filter(|id| order.contains(id));
+        let next = match cur {
             Some(cur) => neighbor(&order, cur, forward),
             None if forward => order.first().copied(),
             None => order.last().copied(),
         };
-        let Some(id) = next else { return false };
+        let Some(id) = next.filter(|&id| Some(id) != cur) else {
+            // At the edge of the grid the same arrow steps the period; vertical arrows have nowhere to go.
+            if key == "left" || key == "right" {
+                self.run(Command::Step(if forward { 1 } else { -1 }), cx);
+            }
+            return true;
+        };
         self.week.roving = Some(id);
         if let Some(e) = events.iter().find(|e| e.id == id).filter(|e| !e.all_day) {
             let start = e.start.date().max(shown.start);

@@ -172,13 +172,11 @@ fn week_arrow_keys_walk_the_events_in_reading_order_with_one_tab_stop(cx: &mut T
     })
     .unwrap();
     cx.update(|cx| assert_eq!(shell.read(cx).week_roving(), Some(3), "the all-day event comes before the 09:00 one of the same day"));
-    cx.update_window(h, |_, w, cx| {
-        w.key_down("right", false, cx);
-        w.key_down("right", false, cx);
-        w.key_down("left", false, cx);
-    })
-    .unwrap();
-    cx.update(|cx| assert_eq!(shell.read(cx).week_roving(), Some(3), "right stops at the last event, left steps back"));
+    cx.update_window(h, |_, w, cx| w.key_down("right", false, cx)).unwrap();
+    cx.update(|cx| assert_eq!(shell.read(cx).week_roving(), Some(2), "right walks on to the last event"));
+    let week = cx.update(|cx| shell.read(cx).model.anchor);
+    cx.update_window(h, |_, w, cx| w.key_down("right", false, cx)).unwrap();
+    cx.update(|cx| assert_eq!(shell.read(cx).model.anchor, week + chrono::Duration::days(7), "right at the last event steps to the next week"));
     cx.update_window(h, |_, w, cx| {
         w.render_frame(cx);
         assert_eq!(w.find("week-scroll").focused(), Some(true), "one press on the grid focuses it");

@@ -10,8 +10,8 @@ use gpui_kit::{
 };
 
 use super::controls::{c, control, elevation};
-use super::popover::anchor_reset;
-use super::model::{Model, NO_PATH, Screen, View, load_note_text};
+use super::popover::{Origin, anchor_reset};
+use super::model::{Command, Model, NO_PATH, Screen, View, command, load_note_text};
 use crate::store::Store;
 use crate::theme::gpui_adapter::color_tokens;
 use crate::theme::resolve::Theme;
@@ -48,7 +48,10 @@ pub(super) fn is_dark(a: WindowAppearance) -> bool {
 
 pub struct Shell {
     pub model: Model,
+    /// Focus when nothing inside has it, so the shortcuts have a place to arrive.
+    root: gpui_kit::FocusHandle,
     clock: Clock,
+    fields: Vec<gpui_kit::FocusHandle>,
     /// The theme last handed to gpui-kit, so unchanged frames do not push it again.
     pushed: Option<Theme>,
     pushes: usize,
@@ -95,9 +98,13 @@ impl Shell {
         let month = super::month::MonthView::new(now.date(), model.week_start(), cx);
         let week = super::week::WeekView::new(cx);
         let year = super::year::YearView::new(cx);
+        let root = cx.focus_handle();
+        window.focus(&root, cx);
         let shell = Self {
             model,
+            root,
             clock,
+            fields: Vec::new(),
             pushed: None,
             pushes: 0,
             month,
@@ -128,6 +135,21 @@ impl Shell {
         let mut shell = shell;
         shell.push_theme(cx);
         shell
+    }
+
+    /// A text field in the chrome: while it has focus the shortcuts stay out of its way.
+    pub fn register_field(&mut self, field: gpui_kit::FocusHandle) {
+        self.fields.push(field);
+    }
+
+    /// Forget the registered fields (their owner is gone).
+    pub(super) fn clear_fields(&mut self) {
+        self.fields.clear();
+    }
+
+    /// `true` if `focused` is a registered field.
+    pub fn typing(&self, focused: Option<&gpui_kit::FocusHandle>) -> bool {
+        focused.is_some_and(|f| self.fields.contains(f))
     }
 
     /// Read the clock; "today" and the next-up banner follow it.
@@ -215,6 +237,33 @@ impl Shell {
     }
 }
 
+impl Shell {
+    /// Run the global shortcut `key` stands for. Instant: no animation starts from the keyboard.
+    /// `true` if it was one.
+    fn shortcut(&mut self, key: &str, modified: bool, held: bool, window: &mut Window, cx: &mut Context<Self>) -> bool {
+        // A field or the popover owns the keyboard, and the Appearance screen has no calendar behind it.
+        let blocked = self.pop.is_some() || self.model.screen != Screen::Calendar || self.typing(window.focused(cx).as_ref());
+        let Some(cmd) = command(key, modified, held, blocked) else { return false };
+        match cmd {
+            // A refusal is said in the notice bar and leaves the key to whoever else wants it.
+            Command::NewEvent => return self.open_new("add", Origin::Key, window, cx),
+            cmd => self.run(cmd, cx),
+        }
+        true
+    }
+
+    /// Navigate: the one path the keys and the header buttons share, so they cannot drift apart.
+    pub(super) fn run(&mut self, cmd: Command, cx: &mut Context<Self>) {
+        match cmd {
+            Command::Today => self.model.go_today(),
+            Command::Show(v) => self.model.set_view(v),
+            Command::Step(dir) => self.model.step(dir),
+            Command::NewEvent => return,
+        }
+        self.sync(cx);
+    }
+}
+
 impl Render for Shell {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let t: Theme = self.model.theme();
@@ -245,10 +294,19 @@ impl Render for Shell {
                     .into_any_element()
             }
         };
+        // Whatever had focus may be gone once this frame is drawn (a view, screen, popover, toast or notice
+        // button left the tree): the shortcuts need a place to arrive, so focus falls back to the root.
+        let root = self.root.clone();
+        window.defer(cx, move |window, cx| {
+            if !root.contains_focused(window, cx) {
+                root.focus(window, cx);
+            }
+        });
         let popover = self.popover_layer(&t, window, cx);
         let toast = self.toast_layer(&t, window, cx);
         div()
             .size_full()
+            .track_focus(&self.root)
             .flex()
             .gap(px(MARGIN))
             .p(px(MARGIN))
@@ -260,6 +318,12 @@ impl Render for Shell {
             .capture_key_down(cx.listener(|this, e: &KeyDownEvent, window, cx| {
                 if e.keystroke.key == "escape" && this.pop.is_some() {
                     this.close_popover(window, cx);
+                    cx.stop_propagation();
+                }
+            }))
+            // Shortcuts: a grid that used the key has already stopped it.
+            .on_key_down(cx.listener(|this, e: &KeyDownEvent, window, cx| {
+                if this.shortcut(&e.keystroke.key, e.keystroke.modifiers.modified(), e.is_held, window, cx) {
                     cx.stop_propagation();
                 }
             }))

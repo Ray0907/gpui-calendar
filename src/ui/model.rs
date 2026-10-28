@@ -2,11 +2,13 @@
 //! drive them directly. Every appearance or visibility change is applied to the store and saved.
 
 mod events;
+mod keys;
 mod merge;
 mod month;
 mod week;
 mod year;
 
+pub use keys::{Command, command};
 pub use month::NEW_EVENT_TITLE;
 
 use std::io;
