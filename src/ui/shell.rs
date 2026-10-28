@@ -314,7 +314,9 @@ impl Render for Shell {
             .text_color(c(t.neutral.t1))
             .text_size(px(13.))
             .font_weight(FontWeight::NORMAL)
-            // Esc closes the popover wherever focus is, before any grid or field sees it.
+            // Esc closes the popover wherever focus is, before any grid or field sees it. gpui runs key bindings
+            // before key-down listeners: an open date picker takes its Cancel and stops it, so only a closed one
+            // (which hands it on) lets Esc get here. One Esc therefore never closes both.
             .capture_key_down(cx.listener(|this, e: &KeyDownEvent, window, cx| {
                 if e.keystroke.key == "escape" && this.pop.is_some() {
                     this.close_popover(window, cx);

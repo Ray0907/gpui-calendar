@@ -5,6 +5,7 @@ fn main() {
     use std::sync::Arc;
 
     use chrono::NaiveDate;
+    use gpui_calendar::domain::form::Field;
     use gpui_calendar::store::Store;
     use gpui_calendar::store::settings::Mode;
     use gpui_calendar::ui::Shell;
@@ -14,7 +15,7 @@ fn main() {
 
     let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/artifacts");
     std::fs::create_dir_all(dir).expect("create artifacts dir");
-    // (file, mode, show the Appearance screen, view, sample events, clock, event whose popover is open)
+    // (file, mode, show the Appearance screen, view, sample events, clock, event whose popover is open, and whether its end-date picker is too)
     for (file, mode, appearance, view, sample, (h, m), popover) in [
         ("shell-light", Mode::Light, false, View::Month, Sample::Seed, (17, 35), None),
         ("shell-dark", Mode::Dark, false, View::Month, Sample::Seed, (17, 35), None),
@@ -28,8 +29,10 @@ fn main() {
         ("year-light", Mode::Light, false, View::Year, Sample::Year, (17, 35), None),
         ("year-dark", Mode::Dark, false, View::Year, Sample::Year, (17, 35), None),
         ("appearance-dark", Mode::Dark, true, View::Month, Sample::Seed, (17, 35), None),
-        ("popover-light", Mode::Light, false, View::Week, Sample::Week, (11, 20), Some(12)),
-        ("popover-dark", Mode::Dark, false, View::Week, Sample::Week, (11, 20), Some(12)),
+        ("popover-light", Mode::Light, false, View::Week, Sample::Week, (11, 20), Some((12, false))),
+        ("popover-dark", Mode::Dark, false, View::Week, Sample::Week, (11, 20), Some((12, false))),
+        ("popover-date-light", Mode::Light, false, View::Week, Sample::Week, (11, 20), Some((12, true))),
+        ("popover-date-dark", Mode::Dark, false, View::Week, Sample::Week, (11, 20), Some((12, true))),
     ] {
         let mut cx = HeadlessAppContext::with_platform(
             gpui_kit::platform::current_platform(true).text_system(),
@@ -66,10 +69,20 @@ fn main() {
         for _ in 0..4 {
             cx.update_window(handle, |_, w, cx| w.render_frame(cx)).expect("render");
         }
-        if let Some(id) = popover {
+        if let Some((id, date)) = popover {
             cx.update_window(handle, |_, w, cx| shell.update(cx, |s, cx| s.show_event(id, w, cx))).expect("open popover");
             for _ in 0..3 {
                 cx.update_window(handle, |_, w, cx| w.render_frame(cx)).expect("render");
+            }
+            if date {
+                let picker = cx.update(|cx| shell.read(cx).popover_date_id(Field::EndDate)).expect("end date picker");
+                cx.update_window(handle, |_, w, cx| w.click(picker, cx)).expect("open picker");
+                // The popup fades in on the wall clock (gpui animations read `Instant`, which the headless context cannot advance),
+                // so only waiting that long shows it fully drawn.
+                std::thread::sleep(std::time::Duration::from_millis(600));
+                for _ in 0..3 {
+                    cx.update_window(handle, |_, w, cx| w.render_frame(cx)).expect("render");
+                }
             }
         }
         let image = cx.capture_screenshot(handle).expect("offscreen rendering");

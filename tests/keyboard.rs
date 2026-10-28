@@ -241,7 +241,8 @@ const ACTIONABLE: [Role; 7] = [Role::Button, Role::CheckBox, Role::RadioButton, 
 
 /// Every actionable or focus-tracked element, and those of them with no name: (seen, via a named ancestor, unnamed).
 /// gpui-kit's `Input` puts its label on its own accessibility node, which the headless observation does not
-/// record; the labelled field group around it is the name the test can see.
+/// record; the labelled field group around it is the name the test can see. The same goes for a date
+/// picker's combo box, which gpui-kit gives no label of its own.
 fn audit(cx: &mut TestAppContext, h: AnyWindowHandle) -> (usize, Vec<String>, Vec<String>) {
     cx.update_window(h, |_, w, cx| {
         w.render_frame(cx);
@@ -253,7 +254,7 @@ fn audit(cx: &mut TestAppContext, h: AnyWindowHandle) -> (usize, Vec<String>, Ve
             let parent = all.iter().find(|a| a.path().len() < e.path().len() && e.path().starts_with(a.path()) && named(a) && a.role() == Some(Role::Group));
             let text = format!("{:?}: {:?}", e.path().last(), e.role());
             match (e.role(), parent) {
-                (None, Some(a)) => inherited.push(format!("{text} <- {}", a.label().unwrap_or_default())),
+                (None | Some(Role::ComboBox), Some(a)) => inherited.push(format!("{text} <- {}", a.label().unwrap_or_default())),
                 _ => bad.push(text),
             }
         }

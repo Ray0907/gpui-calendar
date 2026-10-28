@@ -19,10 +19,15 @@ use crate::ui::shell::Shell;
 use crate::theme::resolve::Theme;
 
 const FADE_MS: u64 = 160;
-const FIELD_H: f32 = 48.;
+pub(super) const FIELD_H: f32 = 48.;
 
-fn label(t: &Theme, text: &'static str) -> impl IntoElement {
+pub(super) fn label(t: &Theme, text: &'static str) -> impl IntoElement {
     div().mb(px(6.)).text_size(px(12.)).font_weight(FontWeight::SEMIBOLD).text_color(c(t.neutral.t1)).child(text)
+}
+
+/// The message under a field, read as an alert.
+pub(super) fn error_note(t: &Theme, id: &str, e: &'static str) -> impl IntoElement {
+    div().id(SharedString::from(format!("{id}-error"))).test_support().role(Role::Alert).aria_label(e).mt(px(4.)).mb(px(12.)).text_size(px(12.)).text_color(c(t.neutral.t1)).child(e)
 }
 
 impl Shell {
@@ -47,20 +52,7 @@ impl Shell {
             .mb(px(if error.is_some() { 4. } else { 16. }))
             .child(label(t, name))
             .child(input)
-            .when_some(error, |d, e| {
-                d.child(
-                    div()
-                        .id(SharedString::from(format!("{id}-error")))
-                        .test_support()
-                        .role(Role::Alert)
-                        .aria_label(e)
-                        .mt(px(4.))
-                        .mb(px(12.))
-                        .text_size(px(12.))
-                        .text_color(c(t.neutral.t1))
-                        .child(e),
-                )
-            })
+            .when_some(error, |d, e| d.child(error_note(t, id, e)))
             .into_any_element()
     }
 
@@ -181,15 +173,18 @@ impl Shell {
         let dot = t.cal(draft.calendar).map_or(c(t.ink), |k| c(k.dot));
         let n = &t.neutral;
         let well = summary(&draft, self.model.today, hour24);
-        let pair = |a: AnyElement, b: AnyElement| div().flex().gap(px(14.)).child(a).child(b);
-        let times = |this: &Self, f: Field, name, id, s: &Entity<InputState>| this.text_field(t, f, name, id, s, form);
         let (i, ev) = (&form.inputs, &form);
-        let start = pair(times(self, Field::StartDate, "Start date", "pop-start-date", &i.start_date), times(self, Field::StartTime, "Start time", "pop-start-time", &i.start_time));
-        let end = pair(times(self, Field::EndDate, "End date", "pop-end-date", &i.end_date), times(self, Field::EndTime, "End time", "pop-end-time", &i.end_time));
+        let pair = |a: AnyElement, b: AnyElement| div().flex().gap(px(14.)).child(a).child(b);
+        let day = |this: &Self, f, name, id| this.date_field(t, f, name, id, ev, cx);
+        let time = |this: &Self, f, name, id, s: &Entity<InputState>| this.text_field(t, f, name, id, s, ev);
+        let (start_day, end_day) = (day(self, Field::StartDate, "Start date", "pop-start-date"), day(self, Field::EndDate, "End date", "pop-end-date"));
         let (start, end) = if draft.all_day {
-            (self.text_field(t, Field::StartDate, "Start date", "pop-start-date", &i.start_date, ev), self.text_field(t, Field::EndDate, "End date", "pop-end-date", &i.end_date, ev))
+            (start_day, end_day)
         } else {
-            (start.into_any_element(), end.into_any_element())
+            (
+                pair(start_day, time(self, Field::StartTime, "Start time", "pop-start-time", &i.start_time)).into_any_element(),
+                pair(end_day, time(self, Field::EndTime, "End time", "pop-end-time", &i.end_time)).into_any_element(),
+            )
         };
         let title = self.text_field(t, Field::Title, "Title", "pop-title", &i.title, ev);
         let cards = self.calendar_cards(t, draft.calendar, window, cx);
@@ -210,13 +205,13 @@ impl Shell {
 
         // The tab stops in reading order, for the focus trap.
         let keyed = |id: String, window: &mut Window, cx: &mut Context<Self>| window.use_keyed_state(SharedString::from(id), cx, |_, cx| cx.focus_handle()).read(cx).clone();
-        let input = |f: Field, cx: &mut Context<Self>| form.inputs.of(f).focus_handle(cx);
-        let mut order = vec![input(Field::Title, cx)];
+        let input = |f: Field, cx: &mut Context<Self>| form.inputs.of(f).map(|i| i.focus_handle(cx)).or_else(|| form.dates.focus(f, cx));
+        let mut order: Vec<_> = input(Field::Title, cx).into_iter().collect();
         order.push(keyed(format!("pop-cal-{}", draft.calendar), window, cx));
-        order.push(input(Field::StartDate, cx));
-        order.extend((!draft.all_day).then(|| input(Field::StartTime, cx)));
-        order.push(input(Field::EndDate, cx));
-        order.extend((!draft.all_day).then(|| input(Field::EndTime, cx)));
+        order.extend(input(Field::StartDate, cx));
+        order.extend(if draft.all_day { None } else { input(Field::StartTime, cx) });
+        order.extend(input(Field::EndDate, cx));
+        order.extend(if draft.all_day { None } else { input(Field::EndTime, cx) });
         order.push(keyed("pop-all-day".into(), window, cx));
         order.extend(existing.then(|| keyed("pop-delete".into(), window, cx)));
         order.push(keyed("pop-cancel".into(), window, cx));
