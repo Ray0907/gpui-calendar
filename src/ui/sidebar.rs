@@ -47,7 +47,7 @@ impl Shell {
                     .pt(px(4.))
                     .px(px(8.))
                     .pb(px(12.))
-                    .child(div().size(px(22.)).rounded(px(6.)).bg(c(t.ink)))
+                    .child(div().id("app-mark").test_support().flex_none().size(px(22.)).rounded(px(6.)).bg(c(t.ink)))
                     .child(div().flex_1().text_size(px(16.)).font_weight(FontWeight::BOLD).child("Calendar"))
                     .child(add),
             )
@@ -287,7 +287,15 @@ impl Shell {
             .border_t_1()
             .border_color(c(n.line))
             .text_color(c(n.t2))
-            .child(div().size(px(22.)).rounded_full().bg(c(n.line)))
+            .child(
+                div()
+                    .id("avatar")
+                    .test_support()
+                    .flex_none()
+                    .size(px(22.))
+                    .rounded_full()
+                    .bg(c(n.line)),
+            )
             .child(div().flex_1().child("John Doe"))
             .child(account)
     }

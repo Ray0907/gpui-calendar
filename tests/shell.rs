@@ -104,6 +104,8 @@ fn sidebar_collapses_to_a_rail_below_1120(cx: &mut TestAppContext) {
         assert!(w.try_find_by_label("Open event").is_none() && w.try_find("banner").is_none(), "banner hidden in the rail");
         assert!(w.try_find("mini-month").is_none());
         assert!(w.try_find_by_label("New event").is_some());
+        assert_eq!(w.find("add-event").bounds().size, size(px(40.), px(40.)), "add button stays square in the rail");
+        assert!(w.try_find("app-mark").is_none() && w.try_find("avatar").is_none(), "the rail draws neither mark nor avatar");
         for n in ["Work", "Personal", "Side project"] {
             assert!(w.try_find_by_label(n).is_some(), "{n} toggle stays in the rail");
         }
@@ -114,6 +116,9 @@ fn sidebar_collapses_to_a_rail_below_1120(cx: &mut TestAppContext) {
         w.render_frame(cx);
         assert_eq!(w.find("sidebar").bounds().size.width, px(236.));
         assert!(w.try_find("mini-month").is_some());
+        for id in ["app-mark", "avatar"] {
+            assert_eq!(w.find(id).bounds().size, size(px(22.), px(22.)), "{id} is the mock's 22px mark");
+        }
     })
     .unwrap();
 }

@@ -16,6 +16,7 @@ fn main() {
     let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/artifacts");
     std::fs::create_dir_all(dir).expect("create artifacts dir");
     // (file, mode, show the Appearance screen, view, sample events, clock, event whose popover is open, and whether its end-date picker is too)
+    let mut written = Vec::new();
     for (file, mode, appearance, view, sample, (h, m), popover) in [
         ("shell-light", Mode::Light, false, View::Month, Sample::Seed, (17, 35), None),
         ("shell-dark", Mode::Dark, false, View::Month, Sample::Seed, (17, 35), None),
@@ -92,6 +93,12 @@ fn main() {
         let first = *image.get_pixel(0, 0);
         assert!(image.pixels().any(|p| *p != first), "{file} is blank");
         println!("screenshot ok: {path} {w}x{h}");
+        written.push(path);
+    }
+    assert!(!written.is_empty(), "no screenshots written");
+    for path in &written {
+        let len = std::fs::metadata(path).unwrap_or_else(|e| panic!("{path} missing: {e}")).len();
+        assert!(len > 0, "{path} is empty");
     }
 }
 #[cfg(not(target_os = "macos"))]
