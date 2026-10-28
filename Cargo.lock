@@ -2116,6 +2116,7 @@ name = "gpui-calendar"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "gpui-calendar",
  "gpui-kit",
  "serde",
  "serde_json",

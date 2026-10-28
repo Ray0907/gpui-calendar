@@ -152,16 +152,18 @@ fn an_invalid_form_blocks_save_and_says_why(cx: &mut TestAppContext) {
 }
 
 #[gpui_kit::test]
-fn the_all_day_toggle_hides_times_and_saves_an_all_day_event(cx: &mut TestAppContext) {
+fn the_all_day_toggle_disables_times_and_saves_an_all_day_event(cx: &mut TestAppContext) {
     let (h, shell) = open_month(cx, "pop-allday");
     cx.update_window(h, |_, w, cx| w.click(format!("month-ev-4-{OCT_26}"), cx)).unwrap();
     cx.update_window(h, |_, w, cx| {
-        assert!(w.try_find("pop-start-time").is_some());
+        assert!(w.try_find("pop-start-time-field").is_some());
         assert_eq!(w.find("pop-all-day").checked(), Some(false));
         w.click("pop-all-day", cx);
         w.render_frame(cx);
         assert_eq!(w.find("pop-all-day").checked(), Some(true));
-        assert!(w.try_find("pop-start-time").is_none() && w.try_find("pop-end-time").is_none(), "times are gone");
+        for id in ["pop-start-time-field", "pop-end-time-field"] {
+            assert!(w.try_find(id).is_some(), "{id} stays, greyed");
+        }
     })
     .unwrap();
     click(cx, h, "pop-save");

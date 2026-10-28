@@ -1,6 +1,7 @@
 //! The start and end days of the popover: picked from gpui-kit's date picker, never typed.
 
 use chrono::NaiveTime;
+use gpui_kit::component::ActiveTheme;
 use gpui_kit::component::date_picker::{DatePicker, DatePickerEvent, DatePickerState};
 use gpui_kit::{
     AnyElement, App, AppContext, Context, ElementId, Entity, FocusHandle, Focusable, InteractiveElement, IntoElement, ParentElement, Role, SharedString, StatefulInteractiveElement, Styled,
@@ -11,6 +12,7 @@ use super::Form;
 use super::fields::{FIELD_H, error_note, label};
 use crate::domain::form::{Field, parse_date};
 use crate::theme::resolve::Theme;
+use crate::ui::controls::field_hover;
 use crate::ui::shell::Shell;
 
 /// ISO, as the draft and the field names write it.
@@ -86,7 +88,7 @@ impl Dates {
 impl Shell {
     /// A labelled day field: the picker's own button-like trigger, named with the day it shows
     /// ("Start date, 2026-10-28"); an error sits under it like a text field's.
-    pub(super) fn date_field(&self, t: &Theme, f: Field, name: &'static str, id: &'static str, form: &Form, cx: &App) -> AnyElement {
+    pub(super) fn date_field(&self, t: &Theme, f: Field, (name, id): (&'static str, &'static str), form: &Form, calm: bool, cx: &App) -> AnyElement {
         let Some(state) = form.dates.of(f) else { return div().into_any_element() };
         let error = form.error(f);
         div()
@@ -99,7 +101,7 @@ impl Shell {
             .mb(px(if error.is_some() { 4. } else { 16. }))
             .child(label(t, name))
             // An unreadable draft day shows as the placeholder, so it can be seen and replaced.
-            .child(DatePicker::new(state).placeholder(form.dates.text(f, cx)).h(px(FIELD_H)))
+            .child(field_hover(t, format!("{id}-box"), cx.theme().radius, calm && error.is_none(), DatePicker::new(state).placeholder(form.dates.text(f, cx)).h(px(FIELD_H))))
             .when_some(error, |d, e| d.child(error_note(t, id, e)))
             .into_any_element()
     }

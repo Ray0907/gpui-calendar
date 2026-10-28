@@ -155,10 +155,10 @@ fn every_hover_and_active_field_belongs_to_a_family() {
         }
     }
     let loose: Vec<_> = library_names().into_iter().filter(|n| (n.ends_with("_hover") || n.ends_with("_active") || n == "sidebar_accent") && !named.contains(n.as_str())).collect();
-    assert!(loose.is_empty(), "hover or active fields with no family (design-tokens 3): {loose:?}");
+    assert!(loose.is_empty(), "hover or active fields with no family (design-states 3): {loose:?}");
 }
 
-/// design-tokens 3: a wash hover differs from its backdrop and stays quiet (contrast 1.08..1.25; luminance <= 0.10 in dark),
+/// design-states 3: a wash hover differs from its backdrop and stays quiet (contrast 1.08..1.25; luminance <= 0.10 in dark),
 /// a press is a step further (1.18..1.40, active != hover). A filled-ink hover is ink at 90% over page and active at 80%: exact.
 #[test]
 fn hover_and_active_states_follow_the_family_rules() {

@@ -9,7 +9,7 @@ use gpui_kit::{
 
 use super::Form;
 use crate::domain::form::Field;
-use crate::ui::controls::{c, control, focus_ring, icon, shape, shape_of};
+use crate::ui::controls::{c, control, field_hover, focus_ring, icon, shape, shape_of};
 use crate::ui::shell::Shell;
 use crate::theme::resolve::Theme;
 
@@ -32,8 +32,8 @@ pub(super) fn error_note(t: &Theme, id: &str, e: &'static str) -> impl IntoEleme
 }
 
 /// A labelled 48px text field; when `error` is set the field gets the ink border and the message
-/// sits under it (read as its description).
-pub(super) fn text_field(t: &Theme, field: Field, name: &'static str, id: &'static str, state: &Entity<InputState>, form: &Form) -> AnyElement {
+/// sits under it (read as its description). `calm` is true while the field is not focused (it hovers in `t2`).
+pub(super) fn text_field(t: &Theme, field: Field, name: &'static str, id: &'static str, state: &Entity<InputState>, form: &Form, calm: bool) -> AnyElement {
     let error = form.error(field);
     let input = Input::new(state)
         .id(id)
@@ -51,7 +51,7 @@ pub(super) fn text_field(t: &Theme, field: Field, name: &'static str, id: &'stat
         .min_w_0()
         .mb(px(if error.is_some() { 4. } else { 16. }))
         .child(label(t, name))
-        .child(input)
+        .child(field_hover(t, format!("{id}-box"), px(FIELD_R), calm && error.is_none(), input))
         .when_some(error, |d, e| d.child(error_note(t, id, e)))
         .into_any_element()
 }
@@ -179,9 +179,9 @@ pub(super) fn section(t: &Theme, stacked: bool, id: &'static str, title: &'stati
 }
 
 /// The multi-line notes box. The group names it "Notes"; the textarea itself carries no label, so it is said once.
-pub(super) fn notes_field(t: &Theme, form: &Form) -> AnyElement {
+pub(super) fn notes_field(t: &Theme, form: &Form, calm: bool) -> AnyElement {
     let area = Textarea::new(&form.inputs.notes).accessibility_id("pop-notes").h(px(NOTES_H)).rounded(px(FIELD_R)).bg(c(t.neutral.surface));
-    div().id("pop-notes-field").test_support().role(Role::Group).aria_label("Notes").child(area).into_any_element()
+    div().id("pop-notes-field").test_support().role(Role::Group).aria_label("Notes").child(field_hover(t, "pop-notes-box", px(FIELD_R), calm, area)).into_any_element()
 }
 
 /// The well under the dates: the readable time over its duration, read as one status.

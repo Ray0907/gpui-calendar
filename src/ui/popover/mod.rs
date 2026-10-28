@@ -5,6 +5,7 @@
 mod date;
 mod fields;
 mod place;
+mod time;
 mod view;
 
 pub(super) use place::{Anchors, anchor_mark, anchor_reset};
@@ -16,6 +17,7 @@ use gpui_kit::component::input::{InputEvent, InputState, TextareaState};
 use gpui_kit::{App, AppContext, Bounds, Context, Entity, FocusHandle, Pixels, Point, Subscription, Window};
 
 use self::date::Dates;
+use self::time::Times;
 use super::shell::Shell;
 use crate::domain::form::{Draft, Field, FormError};
 
@@ -38,20 +40,13 @@ pub(super) enum Origin {
 
 struct Inputs {
     title: Entity<InputState>,
-    start_time: Entity<InputState>,
-    end_time: Entity<InputState>,
     notes: Entity<TextareaState>,
 }
 
 impl Inputs {
-    /// The typed field; the days are picked, so `None` for them.
+    /// The typed field; the days and times are picked, so `None` for them.
     fn of(&self, f: Field) -> Option<&Entity<InputState>> {
-        match f {
-            Field::Title => Some(&self.title),
-            Field::StartTime => Some(&self.start_time),
-            Field::EndTime => Some(&self.end_time),
-            Field::StartDate | Field::EndDate => None,
-        }
+        (f == Field::Title).then_some(&self.title)
     }
 }
 
@@ -63,6 +58,7 @@ pub(super) struct Form {
     errors: Vec<FormError>,
     inputs: Inputs,
     dates: Dates,
+    times: Times,
     anchor: Option<Bounds<Pixels>>,
     by_key: bool,
     /// Counts opens, so each pointer open fades in once.
@@ -70,6 +66,8 @@ pub(super) struct Form {
     trap: FocusHandle,
     /// Every tab stop in the card in reading order; written by each render.
     order: RefCell<Vec<FocusHandle>>,
+    /// The All day control's handle, written by each render: turning All day on moves the focus here out of a time field it disables.
+    all_day: RefCell<Option<FocusHandle>>,
     return_to: Option<FocusHandle>,
     _subs: Vec<Subscription>,
 }
@@ -81,9 +79,9 @@ impl Form {
         Draft {
             title: text(&self.inputs.title),
             start_date: self.dates.text(Field::StartDate, cx),
-            start_time: text(&self.inputs.start_time),
+            start_time: self.times.text(Field::StartTime, cx),
             end_date: self.dates.text(Field::EndDate, cx),
-            end_time: text(&self.inputs.end_time),
+            end_time: self.times.text(Field::EndTime, cx),
             notes: self.inputs.notes.read(cx).value().to_string(),
             ..self.draft.clone()
         }
@@ -109,17 +107,28 @@ impl Shell {
         self.pop.as_ref().map(|f| f.errors.clone()).unwrap_or_default()
     }
 
-    /// Replace the text of one typed field, as typing would (the days are picked, not typed).
+    /// Replace the text of the title, or the time of a time field, as typing or picking would (the days are picked, not typed).
+    #[cfg(any(test, feature = "test-hooks"))]
     pub fn popover_set(&mut self, field: Field, text: &str, window: &mut Window, cx: &mut Context<Self>) {
-        if let Some(input) = self.pop.as_ref().and_then(|f| f.inputs.of(field)) {
+        let Some(f) = self.pop.as_mut() else { return };
+        if let Some(input) = f.inputs.of(field).cloned() {
             input.update(cx, |s, cx| s.set_value(text.to_string(), window, cx));
-            cx.notify();
+        } else if f.times.of(field).is_some() {
+            f.times.set(field, text, window, cx);
+            f.errors.retain(|e| e.field != field);
         }
+        cx.notify();
     }
 
     /// Open the form on `draft` as a keyboard open would, text and all (the days too, readable or not).
     pub fn show_draft(&mut self, draft: Draft, window: &mut Window, cx: &mut Context<Self>) {
         self.open_form(draft, None, Origin::Key, window, cx);
+    }
+
+    /// Flip All day, as its control does but without the click that would move the focus.
+    #[cfg(any(test, feature = "test-hooks"))]
+    pub fn popover_toggle_all_day(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.toggle_form_all_day(window, cx);
     }
 
     /// Replace the notes, as typing would.
@@ -215,24 +224,22 @@ impl Shell {
         let inputs = Inputs {
             notes: textarea("Add notes", std::mem::take(&mut draft.notes), window, cx),
             title: input("Add a title", &draft.title, window, cx),
-            start_time: input("14:00", &draft.start_time, window, cx),
-            end_time: input("15:00", &draft.end_time, window, cx),
         };
         let dates = Dates::new(&draft.start_date, &draft.end_date, window, cx);
+        let times = Times::new(&draft.start_time, &draft.end_time, self.model.store.settings.time_format.hour24(), window, cx);
         let mut subs = dates.watch(window, cx);
-        for (field, state) in [(Field::Title, &inputs.title), (Field::StartTime, &inputs.start_time), (Field::EndTime, &inputs.end_time)] {
-            subs.push(cx.subscribe_in(state, window, move |this, _, ev: &InputEvent, window, cx| match ev {
-                InputEvent::PressEnter { .. } => this.submit_form(window, cx),
-                InputEvent::Change => {
-                    // An error described the text as it was: it goes once the text changes.
-                    if let Some(f) = this.pop.as_mut() {
-                        f.errors.retain(|e| e.field != field);
-                    }
-                    cx.notify();
+        subs.extend(times.watch(window, cx));
+        subs.push(cx.subscribe_in(&inputs.title, window, move |this, _, ev: &InputEvent, window, cx| match ev {
+            InputEvent::PressEnter { .. } => this.submit_form(window, cx),
+            InputEvent::Change => {
+                // An error described the text as it was: it goes once the text changes.
+                if let Some(f) = this.pop.as_mut() {
+                    f.errors.retain(|e| e.field != Field::Title);
                 }
-                _ => {}
-            }));
-        }
+                cx.notify();
+            }
+            _ => {}
+        }));
         self.pop_seq += 1;
         let trap = cx.focus_handle();
         inputs.title.update(cx, |s, cx| s.focus(window, cx));
@@ -241,11 +248,13 @@ impl Shell {
             errors: Vec::new(),
             inputs,
             dates,
+            times,
             anchor,
             by_key: matches!(from, Origin::Key),
             seq: self.pop_seq,
             trap,
             order: RefCell::new(Vec::new()),
+            all_day: RefCell::new(None),
             return_to,
             _subs: subs,
         });
@@ -268,7 +277,7 @@ impl Shell {
                 form.errors = errors;
                 match form.inputs.of(first) {
                     Some(input) => input.update(cx, |s, cx| s.focus(window, cx)),
-                    None => form.dates.focus(first, cx).iter().for_each(|h| h.focus(window, cx)),
+                    None => form.dates.focus(first, cx).or_else(|| form.times.focus(first, cx)).iter().for_each(|h| h.focus(window, cx)),
                 }
             }
             Ok(event) => {
@@ -343,12 +352,14 @@ impl Shell {
         let mut d = f.read(cx);
         d.set_all_day(!d.all_day, hour24);
         for (field, text) in [(Field::StartTime, d.start_time.clone()), (Field::EndTime, d.end_time.clone())] {
-            if let Some(input) = f.inputs.of(field) {
-                input.update(cx, |s, cx| s.set_value(text, window, cx));
-            }
+            f.times.set(field, &text, window, cx);
         }
         f.draft.all_day = d.all_day;
         f.errors.clear();
+        let in_time = [Field::StartTime, Field::EndTime].into_iter().any(|t| f.times.focus(t, cx).is_some_and(|h| h.contains_focused(window, cx)));
+        if d.all_day && in_time {
+            f.all_day.borrow().iter().for_each(|h| h.focus(window, cx));
+        }
         cx.notify();
     }
 

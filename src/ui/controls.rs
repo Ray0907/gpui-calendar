@@ -5,7 +5,7 @@
 use gpui_kit::component::{Icon, IconName, Sizable};
 use gpui_kit::{
     App, BoxShadow, ElementId, FontWeight, Hsla, InteractiveElement, IntoElement, ParentElement, PathBuilder,
-    Role, StatefulInteractiveElement, StyleRefinement, Styled, TestSupportExt, Window, canvas, div, point, px
+    Pixels, Role, SharedString, StatefulInteractiveElement, StyleRefinement, Styled, TestSupportExt, Window, canvas, div, point, prelude::*, px
 };
 
 use super::a11y::Disabled;
@@ -29,6 +29,14 @@ pub(super) fn focus_ring(gap: Hsla, ring_color: Hsla, fill: Hsla) -> impl FnOnce
 /// A 1px outline drawn outside the box, so marking a cell never changes its size.
 pub fn ring_mark(color: Hsla) -> BoxShadow {
     BoxShadow { color, offset: point(px(0.), px(0.)), blur_radius: px(0.), spread_radius: px(1.), inset: false }
+}
+
+/// Field hover (state table, Field): the outline redraws in `t2`. The field's own border is the library's, so this is an overlay
+/// shown only while the box `id` is hovered. `live` is false while the field is focused (the ring wins), disabled or in error.
+pub(super) fn field_hover(t: &crate::theme::resolve::Theme, id: impl Into<SharedString>, radius: Pixels, live: bool, field: impl IntoElement) -> impl IntoElement {
+    let id = id.into();
+    let outline = div().absolute().inset_0().rounded(radius).border_1().border_color(c(t.neutral.t2)).invisible().group_hover(id.clone(), |s| s.visible());
+    div().id(id.clone()).test_support().group(id).relative().child(field).when(live, |d| d.child(outline))
 }
 
 /// A focusable, nameable, pressable element. `gap` is the color behind it (for the ring's gap);

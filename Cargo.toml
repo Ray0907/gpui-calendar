@@ -10,7 +10,12 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 gpui-kit = "0.8.1"
 
+[features]
+# Hooks the popover tests drive it with; the app does not build them. The self dev-dependency below turns them on for every test build.
+test-hooks = []
+
 [dev-dependencies]
+gpui-calendar = { path = ".", features = ["test-hooks"] }
 gpui-kit = { version = "0.8.1", features = ["test-support"] }
 
 [[test]]
@@ -44,3 +49,26 @@ harness = false
 [[test]]
 name = "date_hover"
 harness = false
+
+[[test]]
+name = "time_pixels"
+harness = false
+
+[[test]]
+name = "field_hover"
+harness = false
+
+[[test]]
+name = "popover_new"
+
+[[test]]
+name = "popover_time"
+
+[[test]]
+name = "popover_review"
+
+[[test]]
+name = "popover_form"
+
+[[test]]
+name = "popover"

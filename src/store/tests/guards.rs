@@ -11,23 +11,39 @@ fn mentions_ui_crate(src: &str) -> bool {
     src.replace(&format!("{}-calendar", ui_token()), "").contains(&ui_token())
 }
 
-/// Dependency names in every `[*dependencies*]` table of a Cargo.toml.
-fn dependency_names(cargo: &str) -> Vec<String> {
-    let mut names = Vec::new();
+/// `(name, inline value)` of every entry in every `[*dependencies*]` table of a Cargo.toml.
+/// The `[dependencies.foo]` table form has an empty value.
+fn dependency_entries(cargo: &str) -> Vec<(String, String)> {
+    let mut entries = Vec::new();
     let mut in_deps = false;
     for line in cargo.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')) {
         if let Some(header) = line.strip_prefix('[') {
             let header = header.trim_end_matches(']');
             in_deps = header.ends_with("dependencies") || header.contains("dependencies.");
             if let Some((_, name)) = header.split_once("dependencies.") {
-                names.push(name.to_string()); // [dependencies.foo]
+                entries.push((name.to_string(), String::new())); // [dependencies.foo]
                 in_deps = false;
             }
-        } else if in_deps && let Some((name, _)) = line.split_once('=') {
-            names.push(name.trim().to_string());
+        } else if in_deps && let Some((name, value)) = line.split_once('=') {
+            entries.push((name.trim().to_string(), value.split_whitespace().collect()));
         }
     }
-    names
+    entries
+}
+
+fn dependency_names(cargo: &str) -> Vec<String> {
+    dependency_entries(cargo).into_iter().map(|(n, _)| n).collect()
+}
+
+/// Dependencies outside the allowed set. The package itself is allowed only as the dev-dependency
+/// that turns on its own `test-hooks` feature for tests: path `.`, that one feature, nothing else.
+fn disallowed_deps(cargo: &str) -> Vec<String> {
+    let me = ui_token() + "-calendar";
+    dependency_entries(cargo)
+        .into_iter()
+        .filter(|(n, v)| if *n == me { v != r#"{path=".",features=["test-hooks"]}"# } else { !allowed_deps().contains(n) })
+        .map(|(n, _)| n)
+        .collect()
 }
 
 fn allowed_deps() -> [String; 5] {
@@ -87,7 +103,24 @@ fn cargo_dependencies_stay_within_the_allowed_set() {
     let cargo = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml")).unwrap();
     let names = dependency_names(&cargo);
     assert!(names.iter().any(|n| n == "serde"), "scan found no dependencies: {names:?}");
-    for n in names {
-        assert!(allowed_deps().contains(&n), "dependency {n} is not allowed");
+    assert_eq!(disallowed_deps(&cargo), Vec::<String>::new());
+}
+
+#[test]
+fn self_dependency_is_allowed_only_as_the_test_hooks_path() {
+    let me = ui_token() + "-calendar";
+    let with = |dep: &str| format!("[dependencies]\nserde = \"1\"\n[dev-dependencies]\n{dep}\n");
+    let ok = format!(r#"{me} = {{ path = ".", features = ["test-hooks"] }}"#);
+    assert!(disallowed_deps(&with(&ok)).is_empty());
+    for bad in [
+        "evil = \"1\"".to_string(),
+        format!(r#"{me} = {{ path = ".", features = ["other"] }}"#),
+        format!(r#"{me} = {{ path = ".", features = ["test-hooks", "other"] }}"#),
+        format!(r#"{me} = {{ path = "../elsewhere", features = ["test-hooks"] }}"#),
+        format!(r#"{me} = {{ path = ".", features = ["test-hooks"], default-features = false }}"#),
+        format!(r#"{me} = {{ version = "1", features = ["test-hooks"] }}"#),
+    ] {
+        assert_eq!(disallowed_deps(&with(&bad)).len(), 1, "{bad}");
     }
+    assert_eq!(disallowed_deps(&format!("[dev-dependencies.{me}]\npath = \".\"\n")).len(), 1);
 }

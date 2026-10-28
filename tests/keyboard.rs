@@ -240,7 +240,7 @@ fn audit(cx: &mut TestAppContext, h: AnyWindowHandle) -> (usize, Vec<String>, Ve
             let parent = all.iter().find(|a| a.path().len() < e.path().len() && e.path().starts_with(a.path()) && named(a) && a.role() == Some(Role::Group));
             let text = format!("{:?}: {:?}", e.path().last(), e.role());
             match (e.role(), parent) {
-                (None | Some(Role::ComboBox), Some(a)) => inherited.push(format!("{text} <- {}", a.label().unwrap_or_default())),
+                (None | Some(Role::ComboBox | Role::TimeInput), Some(a)) => inherited.push(format!("{text} <- {}", a.label().unwrap_or_default())),
                 _ => bad.push(text),
             }
         }
