@@ -10,7 +10,7 @@ use gpui_kit::{
 };
 
 use super::controls::{c, control, elevation};
-use super::popover::{Origin, anchor_reset};
+use super::popover::{Origin, anchor_mark, anchor_reset};
 use super::model::{Command, Model, NO_PATH, Screen, View, command, load_note_text};
 use crate::store::Store;
 use crate::theme::gpui_adapter::color_tokens;
@@ -246,7 +246,7 @@ impl Shell {
         let Some(cmd) = command(key, modified, held, blocked) else { return false };
         match cmd {
             // A refusal is said in the notice bar and leaves the key to whoever else wants it.
-            Command::NewEvent => return self.open_new("add", Origin::Key, window, cx),
+            Command::NewEvent => return self.open_new(None, Origin::Key, window, cx),
             cmd => self.run(cmd, cx),
         }
         true
@@ -343,6 +343,7 @@ impl Render for Shell {
                     .overflow_hidden()
                     .flex()
                     .flex_col()
+                    .child(anchor_mark(&self.anchors, "main".into()))
                     .children(notice)
                     .child(main),
             )

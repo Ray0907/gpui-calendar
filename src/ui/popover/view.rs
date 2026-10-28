@@ -287,7 +287,15 @@ impl Shell {
                 };
                 anchored().position(point(px(pos), a.top())).anchor(corner).snap_to_window_with_margin(px(MARGIN)).child(card).into_any_element()
             }
-            None => div().absolute().inset_0().flex().items_center().justify_center().child(card).into_any_element(),
+            // No trigger: centered in the main card (the window until it has been painted), clear of the header title.
+            None => {
+                let area = div().absolute().flex().items_center().justify_center().child(card);
+                match self.anchors.pieces("main").first() {
+                    Some(m) => area.left(m.left()).top(m.top()).w(m.size.width).h(m.size.height),
+                    None => area.inset_0(),
+                }
+                .into_any_element()
+            }
         };
         // The backdrop swallows pointer input: the page behind is inert while the card is open; a click on it closes.
         let backdrop = div()

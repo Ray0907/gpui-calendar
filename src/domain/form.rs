@@ -263,7 +263,12 @@ fn length(mins: i64) -> String {
 /// The well under the dates: ("Tomorrow, 14:00 – 15:00", "1 hour · Wednesday, Oct 28"), or `None`
 /// while the dates and times do not parse into an event.
 pub fn summary(draft: &Draft, today: NaiveDate, hour24: bool) -> Option<(String, String)> {
-    let e = draft.check(0, hour24).ok()?;
+    // The title is the form's own error, not the dates': an empty one must not blank the summary.
+    let mut dated = draft.clone();
+    if dated.title.trim().is_empty() {
+        dated.title = "-".into();
+    }
+    let e = dated.check(0, hour24).ok()?;
     let (first, long) = (e.start.date(), e.start.format("%A, %b %-d").to_string());
     if e.all_day {
         let last = (e.end - Duration::days(1)).date();

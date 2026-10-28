@@ -159,7 +159,7 @@ impl Shell {
 
     /// A new event at `start` (the Add button's default when `None`) on the first calendar that is on.
     /// `true` if the form opened.
-    pub(super) fn open_new(&mut self, anchor_key: &str, from: Origin, window: &mut Window, cx: &mut Context<Self>) -> bool {
+    pub(super) fn open_new(&mut self, anchor_key: Option<&str>, from: Origin, window: &mut Window, cx: &mut Context<Self>) -> bool {
         // With every calendar switched off a new event could not be seen: nothing opens, and the notice says why.
         let Some(calendar) = self.model.new_event_calendar() else {
             self.model.warn("Every calendar is hidden. Turn one on to add an event.".into());
@@ -168,7 +168,7 @@ impl Shell {
         };
         let start = self.model.new_event_start();
         let draft = Draft::new_at(start, calendar, self.model.store.settings.time_format.hour24());
-        let anchor = self.anchor_for(anchor_key, from);
+        let anchor = anchor_key.and_then(|key| self.anchor_for(key, from));
         self.open_form(draft, anchor, from, window, cx);
         true
     }

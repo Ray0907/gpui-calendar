@@ -74,7 +74,7 @@ impl Shell {
             .child(anchor_mark(&self.anchors, "add".into()))
             .on_click(cx.listener(|this, e: &ClickEvent, window, cx| {
                 let from = if e.is_keyboard() { Origin::Key } else { Origin::Pointer(e.position()) };
-                this.open_new("add", from, window, cx);
+                this.open_new(Some("add"), from, window, cx);
             }))
     }
 
