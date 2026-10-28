@@ -4,6 +4,7 @@
 mod merge;
 mod month;
 mod week;
+mod year;
 
 pub use month::NEW_EVENT_TITLE;
 
@@ -16,6 +17,7 @@ use crate::domain::dates::{add_months, month_grid_range};
 use crate::store::settings::{Accent, CalendarColor, Mode, Neutral};
 use crate::store::{CALENDAR_NAMES, LoadNote, PERSONAL, Saved, Store, WORK};
 use crate::domain::event::CalendarId;
+use crate::domain::year::Cursor;
 use crate::theme::resolve::{Theme, resolve};
 use crate::theme::rules::{accent_unavailable_reason, calendar_slots, slot_unavailable_reason};
 
@@ -108,6 +110,10 @@ pub struct Model {
     pub system_dark: bool,
     /// First day of the month the mini month shows.
     mini: NaiveDate,
+    /// The stop the Year view's arrow keys are on; any change of what is shown clears it.
+    pub year_cursor: Option<Cursor>,
+    /// Counts the resets of `year_cursor`: the Year view scrolls back to the anchor once per count.
+    year_epoch: u32,
 }
 
 fn month_start(d: NaiveDate) -> NaiveDate {
@@ -158,6 +164,8 @@ impl Model {
             want_day: today.day(),
             system_dark,
             mini: month_start(today),
+            year_cursor: None,
+            year_epoch: 0,
         }
     }
 
@@ -379,6 +387,7 @@ impl Model {
         self.base = self.anchor;
         self.steps = 0;
         self.view = v;
+        self.reset_year_cursor();
     }
 
     fn focus_anchor(&mut self, d: NaiveDate) {
@@ -387,6 +396,7 @@ impl Model {
         self.steps = 0;
         self.want_day = d.day();
         self.mini = month_start(d);
+        self.reset_year_cursor();
     }
 
     /// Step from the stored base, so 1/31 -> next -> previous is 1/31 again.
@@ -403,6 +413,7 @@ impl Model {
             self.want_day = self.anchor.day();
         }
         self.mini = month_start(self.anchor);
+        self.reset_year_cursor();
     }
 
     /// `n` months from the base month, on `want_day` or the month's last day if it is shorter.
@@ -421,12 +432,13 @@ impl Model {
         format!("{} {}", if next { "Next" } else { "Previous" }, self.view.name().to_lowercase())
     }
 
-    /// Month in `text-1` and year in `text-3`.
-    pub fn title(&self) -> (String, String) {
-        if matches!(self.view, View::Day | View::Week) {
-            return self.week_title();
+    /// Month in `text-1` and year in `text-3`; the Year view has the year alone (no month).
+    pub fn title(&self) -> (Option<String>, String) {
+        if self.view == View::Year {
+            return (None, self.anchor.year().to_string());
         }
-        (self.anchor.format("%B").to_string(), self.anchor.year().to_string())
+        let (month, year) = if matches!(self.view, View::Day | View::Week) { self.week_title() } else { (self.anchor.format("%B").to_string(), self.anchor.year().to_string()) };
+        (Some(month), year)
     }
 
     pub fn pick_day(&mut self, d: NaiveDate) {

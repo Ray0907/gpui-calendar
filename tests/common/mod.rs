@@ -1,5 +1,6 @@
 //! Shared helpers of the headless shell tests.
 #![allow(dead_code)]
+pub mod year;
 use chrono::{NaiveDate, NaiveDateTime};
 use gpui_calendar::store::Store;
 use gpui_calendar::ui::{Clock, Shell, window_options};

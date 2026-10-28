@@ -18,6 +18,10 @@ use crate::theme::resolve::Theme;
 /// Guide 5: minimum window 960 by 600; the sidebar becomes a rail below `RAIL_BELOW`.
 pub const MIN_WINDOW: (f32, f32) = (960., 600.);
 pub const RAIL_BELOW: f32 = 1120.;
+/// Padding around the window's content and the gap between sidebar and card.
+const MARGIN: f32 = 16.;
+/// What the shell spends above and below a view's body: its margins and the header.
+pub const CHROME_H: f32 = 2. * MARGIN + super::header::HEADER_H;
 
 pub fn window_options() -> WindowOptions {
     WindowOptions {
@@ -49,6 +53,7 @@ pub struct Shell {
     pushes: usize,
     pub(super) month: super::month::MonthView,
     pub(super) week: super::week::WeekView,
+    pub(super) year: super::year::YearView,
 }
 
 impl Shell {
@@ -80,7 +85,8 @@ impl Shell {
         let model = Model::new(store, path, now.date(), now.time(), dark);
         let month = super::month::MonthView::new(now.date(), model.week_start(), cx);
         let week = super::week::WeekView::new(cx);
-        let shell = Self { model, clock, pushed: None, pushes: 0, month, week };
+        let year = super::year::YearView::new(cx);
+        let shell = Self { model, clock, pushed: None, pushes: 0, month, week, year };
         cx.observe_window_appearance(window, |this, window, cx| {
             this.model.system_dark = is_dark(window.appearance());
             this.sync(cx);
@@ -203,7 +209,7 @@ impl Render for Shell {
                         self.month_view(&t, narrow, window, cx)
                     }
                     View::Day | View::Week => self.week_view(&t, window, cx),
-                    View::Year => div().id("main-content").flex_1().into_any_element(),
+                    View::Year => self.year_view(&t, narrow, window, cx),
                 };
                 div()
                     .w_full()
@@ -219,8 +225,8 @@ impl Render for Shell {
         div()
             .size_full()
             .flex()
-            .gap(px(16.))
-            .p(px(16.))
+            .gap(px(MARGIN))
+            .p(px(MARGIN))
             .bg(c(t.neutral.page))
             .text_color(c(t.neutral.t1))
             .text_size(px(13.))

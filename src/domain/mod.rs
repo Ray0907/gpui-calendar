@@ -5,6 +5,7 @@ pub mod drag;
 pub mod event;
 pub mod layout;
 pub mod month;
+pub mod year;
 
 #[cfg(test)]
 mod tests;

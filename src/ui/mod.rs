@@ -10,6 +10,7 @@ mod month;
 mod shell;
 mod sidebar;
 mod week;
+mod year;
 
 pub use shell::{Clock, MIN_WINDOW, RAIL_BELOW, Shell, local_clock, window_options};
 

@@ -15,13 +15,13 @@ fn model_at(h: u32, mi: u32) -> Model {
 #[test]
 fn title_follows_the_anchor_and_navigation_steps_by_view() {
     let mut m = model_at(9, 0);
-    assert_eq!(m.title(), ("October".to_string(), "2026".to_string()));
+    assert_eq!(m.title(), (Some("October".to_string()), "2026".to_string()));
     assert_eq!(m.step_name(false), "Previous month");
     m.set_view(View::Week);
     assert_eq!(m.step_name(true), "Next week");
     m.step(1);
     assert_eq!(m.anchor, NaiveDate::from_ymd_opt(2026, 11, 4).unwrap());
-    assert_eq!(m.title(), ("November".to_string(), "2026".to_string()));
+    assert_eq!(m.title(), (Some("November".to_string()), "2026".to_string()));
     m.set_view(View::Day);
     assert_eq!(m.step_name(true), "Next day");
     m.step(-1);
@@ -159,7 +159,7 @@ fn month_steps_cross_a_year_in_both_directions() {
     m.pick_day(d(2025, 12, 31));
     m.step(2);
     assert_eq!(m.anchor, d(2026, 2, 28));
-    assert_eq!(m.title(), ("February".to_string(), "2026".to_string()));
+    assert_eq!(m.title(), (Some("February".to_string()), "2026".to_string()));
     m.step(-14);
     assert_eq!(m.anchor, d(2024, 12, 31), "14 months back from base Dec 2025 + 2 - 14 = Dec 2024");
     m.set_view(View::Day);
@@ -195,7 +195,7 @@ fn week_to_month_keeps_the_shown_date() {
     m.step(1);
     assert_eq!(m.anchor, d(2026, 11, 18));
     m.set_view(View::Month);
-    assert_eq!(m.title(), ("November".to_string(), "2026".to_string()));
+    assert_eq!(m.title(), (Some("November".to_string()), "2026".to_string()));
     assert_eq!(m.mini_title(), "November 2026");
     m.step(1);
     assert_eq!(m.anchor, d(2026, 12, 18));

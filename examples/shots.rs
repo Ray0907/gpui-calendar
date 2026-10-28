@@ -24,6 +24,9 @@ fn main() {
         ("week-light", Mode::Light, false, View::Week, Sample::Week, (11, 20)),
         ("week-dark", Mode::Dark, false, View::Week, Sample::Week, (11, 20)),
         ("day-light", Mode::Light, false, View::Day, Sample::Week, (11, 20)),
+        ("day-dark", Mode::Dark, false, View::Day, Sample::Week, (11, 20)),
+        ("year-light", Mode::Light, false, View::Year, Sample::Year, (17, 35)),
+        ("year-dark", Mode::Dark, false, View::Year, Sample::Year, (17, 35)),
     ] {
         let mut cx = HeadlessAppContext::with_platform(
             gpui_kit::platform::current_platform(true).text_system(),
@@ -37,6 +40,7 @@ fn main() {
             Sample::Seed => {}
             Sample::Month => store.events = busy_month(),
             Sample::Week => store.events = busy_week(),
+            Sample::Year => store.events = busy_year(),
         }
         let now = NaiveDate::from_ymd_opt(2026, 10, 28).expect("date").and_hms_opt(h, m, 0).expect("time");
         let opts = WindowOptions {
@@ -107,6 +111,7 @@ enum Sample {
     Seed,
     Month,
     Week,
+    Year,
 }
 
 /// Invented week of Oct 26: overlaps, a third overlap (the "+1 more" block), a bar across two days and a pill.
@@ -141,4 +146,32 @@ fn busy_week() -> Vec<gpui_calendar::domain::event::Event> {
         timed(18, "Long run", PERSONAL, 31, 8, 0, 60),
         timed(19, "Water plants", PERSONAL, 31, 10, 0, 30),
     ]
+}
+
+/// October's events plus invented ones across the other months: single dots, all three shapes on one day, a bar over New Year.
+#[cfg(target_os = "macos")]
+fn busy_year() -> Vec<gpui_calendar::domain::event::Event> {
+    use chrono::NaiveDate;
+    use gpui_calendar::domain::event::Event;
+    use gpui_calendar::store::{PERSONAL, SIDE, WORK};
+    let day = |m, d| NaiveDate::from_ymd_opt(2026, m, d).expect("date");
+    let timed = |id, title, cal, m, d, h| {
+        let start = day(m, d).and_hms_opt(h, 0, 0).expect("time");
+        Event::timed(id, title, cal, start, start + chrono::Duration::minutes(60))
+    };
+    let mut events = busy_month();
+    events.extend([
+        timed(101, "Kickoff", WORK, 1, 6, 10),
+        timed(102, "Ski day", PERSONAL, 2, 14, 9),
+        Event::all_day(103, "Spring break", PERSONAL, day(3, 30), day(4, 3)),
+        timed(104, "Demo", SIDE, 5, 12, 15),
+        timed(105, "Budget review", WORK, 5, 12, 16),
+        timed(106, "Birthday dinner", PERSONAL, 5, 12, 19),
+        timed(107, "Planning", WORK, 6, 2, 9),
+        Event::all_day(108, "Summer trip", PERSONAL, day(7, 20), day(7, 27)),
+        timed(109, "Launch", WORK, 9, 8, 11),
+        timed(110, "Workshop", SIDE, 11, 17, 18),
+        Event::all_day(111, "Holiday party", PERSONAL, day(12, 24), NaiveDate::from_ymd_opt(2026, 12, 25).expect("date")),
+    ]);
+    events
 }

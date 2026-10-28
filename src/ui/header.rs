@@ -11,6 +11,9 @@ use super::model::View;
 use super::shell::Shell;
 use crate::theme::resolve::Theme;
 
+/// Height of the header row: the year view sizes its days from what the window has left.
+pub const HEADER_H: f32 = 64.;
+
 impl Shell {
     pub(super) fn header(&mut self, t: &Theme, window: &mut Window, cx: &mut Context<Self>) -> gpui_kit::AnyElement {
         let n = &t.neutral;
@@ -77,20 +80,22 @@ impl Shell {
             .flex()
             .items_center()
             .px(px(16.))
-            .py(px(12.))
+            .h(px(HEADER_H))
+            .flex_none()
             .child(
                 div()
                     .id("header-title")
                     .test_support()
-                    .aria_label(format!("{month} {year}"))
+                    .aria_label(month.as_ref().map_or(year.clone(), |m| format!("{m} {year}")))
                     .flex_1()
                     .flex()
                     .items_baseline()
                     .gap(px(8.))
                     .text_size(px(24.))
                     .font_weight(FontWeight::BOLD)
-                    .child(month)
-                    .child(div().text_color(c(n.t3)).font_weight(FontWeight::MEDIUM).child(year)),
+                    .when(month.is_some(), |s| s.children(month.clone()))
+                    // Alone (Year view) the year is the title: text-1.
+                    .child(if month.is_some() { div().text_color(c(n.t3)).font_weight(FontWeight::MEDIUM).child(year) } else { div().child(year) }),
             )
             .child(
                 div()

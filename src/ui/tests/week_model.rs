@@ -20,20 +20,20 @@ fn d(y: i32, m: u32, day: u32) -> NaiveDate {
 fn the_week_title_names_the_months_it_touches() {
     let mut m = model_on(2026, 10, 28);
     m.set_view(View::Week);
-    assert_eq!(m.title(), ("Oct – Nov".to_string(), "2026".to_string()), "Oct 26 to Nov 1");
+    assert_eq!(m.title(), (Some("Oct – Nov".to_string()), "2026".to_string()), "Oct 26 to Nov 1");
     m.step(1);
-    assert_eq!(m.title(), ("November".to_string(), "2026".to_string()), "Nov 2 to 8 is one month");
+    assert_eq!(m.title(), (Some("November".to_string()), "2026".to_string()), "Nov 2 to 8 is one month");
     m.pick_day(d(2026, 12, 30));
-    assert_eq!(m.title(), ("Dec – Jan".to_string(), "2026 – 2027".to_string()));
+    assert_eq!(m.title(), (Some("Dec – Jan".to_string()), "2026 – 2027".to_string()));
 }
 
 #[test]
 fn the_day_title_names_the_day() {
     let mut m = model_on(2026, 10, 28);
     m.set_view(View::Day);
-    assert_eq!(m.title(), ("Wed 28 Oct".to_string(), "2026".to_string()));
+    assert_eq!(m.title(), (Some("Wed 28 Oct".to_string()), "2026".to_string()));
     m.step(4);
-    assert_eq!(m.title(), ("Sun 1 Nov".to_string(), "2026".to_string()));
+    assert_eq!(m.title(), (Some("Sun 1 Nov".to_string()), "2026".to_string()));
 }
 
 #[test]
