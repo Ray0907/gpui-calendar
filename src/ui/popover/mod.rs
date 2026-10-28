@@ -214,13 +214,6 @@ impl Shell {
             }));
         }
         self.pop_seq += 1;
-        self.clear_fields();
-        for field in [&inputs.title, &inputs.start_time, &inputs.end_time] {
-            self.register_field(gpui_kit::Focusable::focus_handle(field, cx));
-        }
-        for handle in [Field::StartDate, Field::EndDate].into_iter().filter_map(|day| dates.focus(day, cx)) {
-            self.register_field(handle);
-        }
         let trap = cx.focus_handle();
         inputs.title.update(cx, |s, cx| s.focus(window, cx));
         self.pop = Some(Form {
@@ -242,7 +235,6 @@ impl Shell {
     /// Close without saving; focus goes back to where it was.
     pub fn close_popover(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let Some(f) = self.pop.take() else { return };
-        self.clear_fields();
         f.return_to.unwrap_or_else(|| self.grid_focus()).focus(window, cx);
         cx.notify();
     }
@@ -284,6 +276,12 @@ impl Shell {
         self.close_popover(window, cx);
         self.show_toast("Event deleted.", cx);
         self.sync(cx);
+    }
+
+    /// Drags are not undoable, so one makes the history and the toast stale: they would replay over it.
+    pub(super) fn forget_undo(&mut self) {
+        self.toast = None;
+        self.undo.clear();
     }
 
     /// Undo the last delete or save.

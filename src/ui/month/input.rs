@@ -51,6 +51,7 @@ impl Shell {
             return;
         }
         if let Some(p) = m.drag.end() {
+            self.forget_undo();
             match m.id {
                 Some(id) => {
                     self.model.move_from_drag(id, p);

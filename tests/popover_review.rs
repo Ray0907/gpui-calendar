@@ -153,3 +153,77 @@ fn calendar_cards_are_one_tab_stop_and_arrows_move(cx: &mut TestAppContext) {
     let cal = cx.update(|cx| shell.read(cx).popover_draft(cx).unwrap().calendar);
     assert_eq!(cal, 1, "the arrow chose the next card");
 }
+
+fn ids_unique(cx: &mut TestAppContext, shell: &Entity<Shell>) -> bool {
+    let ids: Vec<u64> = cx.update(|cx| shell.read(cx).model.store.events.iter().map(|e| e.id).collect());
+    ids.iter().all(|id| ids.iter().filter(|o| *o == id).count() == 1)
+}
+
+fn delete_highest(cx: &mut TestAppContext, h: AnyWindowHandle, shell: &Entity<Shell>) {
+    let top = cx.update(|cx| shell.read(cx).model.store.events.iter().map(|e| e.id).max().unwrap());
+    cx.update_window(h, |_, w, cx| shell.update(cx, |s, cx| s.show_event(top, w, cx))).unwrap();
+    cx.update_window(h, |_, w, cx| w.click("pop-delete", cx)).unwrap();
+}
+
+#[gpui_kit::test]
+fn undo_after_a_drag_create_never_duplicates_an_id(cx: &mut TestAppContext) {
+    let (h, shell) = open_month(cx, "rev-undo-dup", |_| {});
+    delete_highest(cx, h, &shell);
+    cx.update_window(h, |_, w, cx| {
+        w.render_frame(cx);
+        let at = |w: &gpui_kit::Window, day| w.find(format!("month-cell-2026-10-{day:02}")).bounds().center();
+        let (a, b) = (at(w, 6), at(w, 8));
+        w.pointer_down(a, MouseButton::Left, cx);
+        w.pointer_move(b, Some(MouseButton::Left), cx);
+        w.pointer_up(b, MouseButton::Left, cx);
+        w.render_frame(cx);
+    })
+    .unwrap();
+    cx.update(|cx| shell.update(cx, |s, cx| s.undo_last(cx)));
+    assert!(ids_unique(cx, &shell), "undo must not put back an id the new event now holds");
+}
+
+#[gpui_kit::test]
+fn a_drag_edit_clears_the_toast_and_the_undo_history(cx: &mut TestAppContext) {
+    let (h, shell) = open_month(cx, "rev-undo-drag", |_| {});
+    cx.update_window(h, |_, w, cx| w.click(format!("month-ev-4-{OCT_26}"), cx)).unwrap();
+    cx.update_window(h, |_, w, cx| w.click("pop-delete", cx)).unwrap();
+    assert!(cx.update(|cx| shell.read(cx).toast_text().is_some()));
+    cx.update_window(h, |_, w, cx| {
+        w.render_frame(cx);
+        let from = w.find(format!("month-ev-5-{OCT_26}")).bounds().center();
+        let to = w.find("month-cell-2026-10-30").bounds().center();
+        w.pointer_down(from, MouseButton::Left, cx);
+        w.pointer_move(to, Some(MouseButton::Left), cx);
+        w.pointer_up(to, MouseButton::Left, cx);
+    })
+    .unwrap();
+    assert!(cx.update(|cx| shell.read(cx).toast_text().is_none()), "the offer to undo goes");
+    cx.update(|cx| shell.update(cx, |s, cx| s.undo_last(cx)));
+    assert!(cx.update(|cx| shell.read(cx).model.event(4).is_none()), "nothing left to undo");
+}
+
+#[gpui_kit::test]
+fn a_week_drag_edit_clears_the_toast_and_the_undo_history(cx: &mut TestAppContext) {
+    let gone = Event::timed(101, "Gone", WORK, at(28, 9, 0), at(28, 10, 0));
+    let review = Event::timed(100, "Review", WORK, at(28, 14, 0), at(28, 15, 0));
+    let (h, shell) = open_week(cx, "rev-week-undo", View::Week, vec![gone, review]);
+    cx.update_window(h, |_, w, cx| shell.update(cx, |s, cx| s.show_event(101, w, cx))).unwrap();
+    cx.update_window(h, |_, w, cx| w.click("pop-delete", cx)).unwrap();
+    assert!(cx.update(|cx| shell.read(cx).toast_text().is_some()));
+    cx.update_window(h, |_, w, cx| {
+        w.render_frame(cx);
+        let min = |day: u32, m: f32| {
+            let b = w.find(format!("week-col-2026-10-{day:02}")).bounds();
+            point(b.center().x, b.top() + px(m * 44. / 60.))
+        };
+        let (from, to) = (min(28, 14. * 60. + 20.5), min(30, 16. * 60. + 20.5));
+        w.pointer_down(from, MouseButton::Left, cx);
+        w.pointer_up(to, MouseButton::Left, cx);
+    })
+    .unwrap();
+    assert_eq!(event(cx, &shell, 100).start.date(), at(30, 0, 0).date(), "the drag moved it");
+    assert!(cx.update(|cx| shell.read(cx).toast_text().is_none()), "the offer to undo goes");
+    cx.update(|cx| shell.update(cx, |s, cx| s.undo_last(cx)));
+    assert!(cx.update(|cx| shell.read(cx).model.event(101).is_none()), "nothing left to undo");
+}

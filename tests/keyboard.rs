@@ -154,20 +154,6 @@ fn n_with_every_calendar_hidden_says_why_and_is_not_swallowed(cx: &mut TestAppCo
     assert!(cx.update(|cx| shell.read(cx).model.notice.contains("calendar")), "a visible reason");
 }
 
-#[gpui_kit::test]
-fn a_registered_text_field_with_focus_silences_the_shortcuts(cx: &mut TestAppContext) {
-    let (h, shell) = open(cx, "kb-typing");
-    let typed = cx.update_window(h, |_, w, cx| {
-        let input = cx.new(|cx| gpui_kit::component::input::InputState::new(w, cx));
-        let handle = gpui_kit::Focusable::focus_handle(&input, cx);
-        shell.update(cx, |s, _| s.register_field(handle.clone()));
-        shell.read(cx).typing(Some(&handle))
-    })
-    .unwrap();
-    assert!(typed);
-    assert!(!cx.update(|cx| shell.read(cx).typing(None)));
-}
-
 fn focus_grid(cx: &mut TestAppContext, h: AnyWindowHandle, shell: &Entity<Shell>) {
     cx.update_window(h, |_, w, cx| {
         shell.read(cx).grid_focus().focus(w, cx);
@@ -310,17 +296,6 @@ fn with_reduced_motion_the_popover_still_opens_by_pointer_and_key(cx: &mut TestA
     key(cx, h, "escape");
     key(cx, h, "n");
     assert_eq!(cx.update(|cx| shell.read(cx).popover_by_key()), Some(true));
-}
-
-#[gpui_kit::test]
-fn the_popover_inputs_are_real_text_fields(cx: &mut TestAppContext) {
-    let (h, shell) = open(cx, "kb-real-input");
-    key(cx, h, "n"); // focuses the title input
-    let typing = cx.update_window(h, |_, w, cx| shell.read(cx).typing(w.focused(cx).as_ref())).unwrap();
-    assert!(typing, "the focused title input counts as a text field");
-    key(cx, h, "escape");
-    let typing = cx.update_window(h, |_, w, cx| shell.read(cx).typing(w.focused(cx).as_ref())).unwrap();
-    assert!(!typing, "the closed popover leaves no field behind");
 }
 
 #[gpui_kit::test]

@@ -51,7 +51,6 @@ pub struct Shell {
     /// Focus when nothing inside has it, so the shortcuts have a place to arrive.
     root: gpui_kit::FocusHandle,
     clock: Clock,
-    fields: Vec<gpui_kit::FocusHandle>,
     /// The theme last handed to gpui-kit, so unchanged frames do not push it again.
     pushed: Option<Theme>,
     pushes: usize,
@@ -104,7 +103,6 @@ impl Shell {
             model,
             root,
             clock,
-            fields: Vec::new(),
             pushed: None,
             pushes: 0,
             month,
@@ -135,21 +133,6 @@ impl Shell {
         let mut shell = shell;
         shell.push_theme(cx);
         shell
-    }
-
-    /// A text field in the chrome: while it has focus the shortcuts stay out of its way.
-    pub fn register_field(&mut self, field: gpui_kit::FocusHandle) {
-        self.fields.push(field);
-    }
-
-    /// Forget the registered fields (their owner is gone).
-    pub(super) fn clear_fields(&mut self) {
-        self.fields.clear();
-    }
-
-    /// `true` if `focused` is a registered field.
-    pub fn typing(&self, focused: Option<&gpui_kit::FocusHandle>) -> bool {
-        focused.is_some_and(|f| self.fields.contains(f))
     }
 
     /// Read the clock; "today" and the next-up banner follow it.
@@ -242,7 +225,7 @@ impl Shell {
     /// `true` if it was one.
     fn shortcut(&mut self, key: &str, modified: bool, held: bool, window: &mut Window, cx: &mut Context<Self>) -> bool {
         // A field or the popover owns the keyboard, and the Appearance screen has no calendar behind it.
-        let blocked = self.pop.is_some() || self.model.screen != Screen::Calendar || self.typing(window.focused(cx).as_ref());
+        let blocked = self.pop.is_some() || self.model.screen != Screen::Calendar;
         let Some(cmd) = command(key, modified, held, blocked) else { return false };
         match cmd {
             // A refusal is said in the notice bar and leaves the key to whoever else wants it.

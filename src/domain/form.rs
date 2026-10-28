@@ -99,19 +99,6 @@ impl Draft {
         }
     }
 
-    pub fn new_all_day(day: NaiveDate, calendar: CalendarId) -> Self {
-        Self {
-            id: None,
-            title: String::new(),
-            calendar,
-            all_day: true,
-            start_date: date_text(day),
-            start_time: nine(true, 0),
-            end_date: date_text(day),
-            end_time: nine(true, 1),
-        }
-    }
-
     /// Flip the all-day switch. Turning it off leaves times that parse (rewritten in `hour24`) and
     /// puts 09:00 to 10:00 where they do not.
     pub fn set_all_day(&mut self, on: bool, hour24: bool) {
@@ -122,15 +109,6 @@ impl Draft {
         for (text, plus) in [(&mut self.start_time, 0), (&mut self.end_time, 1)] {
             // Rewriting what is there: either format is read, as the text may predate `hour24`.
             *text = parse_time(text, true).map_or_else(|| nine(hour24, plus), |t| format_time(t, hour24));
-        }
-    }
-
-    /// The time format changed: rewrite times that parse, leave the rest for the user.
-    pub fn reformat(&mut self, hour24: bool) {
-        for text in [&mut self.start_time, &mut self.end_time] {
-            if let Some(t) = parse_time(text, true) {
-                *text = format_time(t, hour24);
-            }
         }
     }
 

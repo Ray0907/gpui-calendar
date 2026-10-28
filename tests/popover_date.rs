@@ -215,15 +215,6 @@ fn a_date_that_cannot_be_read_stays_visible_and_is_refused_on_save(cx: &mut Test
 }
 
 #[gpui_kit::test]
-fn date_pickers_count_as_typing_fields(cx: &mut TestAppContext) {
-    let (_h, shell) = edit(cx, "date-typing");
-    for f in [Field::StartDate, Field::EndDate] {
-        let handle = cx.update(|cx| shell.read(cx).popover_date_focus(f, cx)).unwrap();
-        assert!(cx.update(|cx| shell.read(cx).typing(Some(&handle))), "{f:?}");
-    }
-}
-
-#[gpui_kit::test]
 fn an_error_goes_when_the_day_changes_not_when_it_is_picked_again(cx: &mut TestAppContext) {
     let (h, shell) = open_month(cx, "date-reclear");
     cx.update_window(h, |_, w, cx| {

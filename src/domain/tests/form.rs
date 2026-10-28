@@ -131,9 +131,16 @@ fn all_day_ignores_the_times() {
     assert_eq!((e.start, e.end), (dt(28, 0, 0), dt(29, 0, 0)));
 }
 
+/// A blank form for `day`, switched to all day.
+fn all_day(day: NaiveDate) -> Draft {
+    let mut x = Draft::new_at(day.and_hms_opt(9, 0, 0).unwrap(), 0, true);
+    x.set_all_day(true, true);
+    x
+}
+
 #[test]
 fn all_day_end_before_start_is_an_error_on_the_end_date() {
-    let mut x = Draft::new_all_day(d(10), 0);
+    let mut x = all_day(d(10));
     x.title = "Trip".into();
     x.end_date = "2026-10-09".into();
     assert_eq!(fields(x.check(1, true)), [Field::EndDate]);
@@ -141,7 +148,7 @@ fn all_day_end_before_start_is_an_error_on_the_end_date() {
 
 #[test]
 fn turning_all_day_off_brings_back_working_times() {
-    let mut x = Draft::new_all_day(d(10), 0);
+    let mut x = all_day(d(10));
     x.title = "x".into();
     x.set_all_day(false, true);
     assert_eq!((x.start_time.as_str(), x.end_time.as_str()), ("09:00", "10:00"));
@@ -150,16 +157,6 @@ fn turning_all_day_off_brings_back_working_times() {
     x.set_all_day(false, false);
     assert_eq!(x.start_time, "9:00 AM", "kept times follow a new format");
     assert_eq!(x.end_time, "10:00 AM");
-}
-
-#[test]
-fn switching_the_format_rewrites_the_times() {
-    let mut x = Draft::for_event(&lunch(), true);
-    x.reformat(false);
-    assert_eq!((x.start_time.as_str(), x.end_time.as_str()), ("12:30 PM", "1:30 PM"));
-    x.start_time = "oops".into();
-    x.reformat(true);
-    assert_eq!(x.start_time, "oops", "text that does not parse is left for the user");
 }
 
 #[test]
@@ -262,7 +259,7 @@ fn the_well_says_when_and_for_how_long() {
 
 #[test]
 fn the_well_for_all_day_counts_days() {
-    let mut x = Draft::new_all_day(d(28), 0);
+    let mut x = all_day(d(28));
     x.title = "t".into();
     assert_eq!(summary(&x, d(28), true), Some(("Today".into(), "All day · 1 day · Wednesday, Oct 28".into())));
     x.end_date = "2026-10-30".into();

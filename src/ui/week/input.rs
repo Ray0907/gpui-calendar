@@ -120,6 +120,7 @@ impl Shell {
             return;
         }
         if let Some(pre) = w.drag.end() {
+            self.forget_undo();
             match w.id {
                 Some(id) => {
                     self.model.move_from_drag(id, pre);

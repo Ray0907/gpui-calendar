@@ -49,7 +49,7 @@ impl Model {
     /// A new all-day event from a drag across days; `None` if no calendar is switched on.
     pub fn create_from_drag(&mut self, p: Preview) -> Option<u64> {
         let calendar = self.new_event_calendar()?;
-        let id = self.store.events.iter().map(|e| e.id).max().map_or(1, |m| m + 1);
+        let id = self.next_event_id();
         self.store.events.push(Event { id, title: NEW_EVENT_TITLE.into(), calendar, start: p.start, end: p.end, all_day: p.all_day });
         self.persist();
         Some(id)
