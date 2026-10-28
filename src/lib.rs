@@ -1,6 +1,7 @@
 pub mod domain;
 pub mod store;
 pub mod theme;
+pub mod ui;
 
 use gpui_kit::{Context, IntoElement, Render, TestSupportExt, Window, div, prelude::*};
 

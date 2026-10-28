@@ -1,10 +1,12 @@
-use gpui_calendar::Spike;
-use gpui_kit::{AppContext, WindowOptions};
+use gpui_calendar::store;
+use gpui_calendar::ui::{Shell, local_clock, window_options};
+use gpui_kit::AppContext;
 
 fn main() {
     gpui_kit::application().run(move |cx| {
         gpui_kit::init(cx);
-        gpui_kit::open_window(WindowOptions::default(), cx, |_, cx| cx.new(|_| Spike::new()))
+        // A file that cannot be read is kept as it is: defaults on screen, saving off, reason shown.
+        gpui_kit::open_window(window_options(), cx, |window, cx| cx.new(|cx| Shell::start(store::default_path(), local_clock(), window, cx)))
             .expect("open window");
     });
 }

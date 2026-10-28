@@ -174,3 +174,23 @@ fn directory_read_error_is_not_invalid_data_and_nothing_is_created() {
     assert!(t.file().is_dir());
     assert_eq!(fs::read_dir(&t.0).unwrap().count(), 1);
 }
+
+#[test]
+fn load_noted_says_when_the_original_was_kept_as_a_backup() {
+    let t = Tmp::new();
+    custom().save(&t.file()).unwrap();
+    assert_eq!(Store::load_noted(&t.file()).unwrap().1, None, "a clean file needs no note");
+
+    let mut v = serde_json::to_value(custom()).unwrap();
+    v["events"].as_array_mut().unwrap().insert(0, json!({"id": "nope"}));
+    write_json(&t, &v);
+    assert_eq!(Store::load_noted(&t.file()).unwrap().1, Some(LoadNote::Repaired));
+
+    write_json(&t, &json!({"version": 999}));
+    assert_eq!(Store::load_noted(&t.file()).unwrap().1, Some(LoadNote::Quarantined));
+    assert!(!t.file().exists(), "the original was moved to a backup");
+
+    fs::write(t.file(), [0xff, 0xfe, 0x00]).unwrap();
+    let (store, note) = Store::load_noted(&t.file()).unwrap();
+    assert_eq!((store, note), (Store::default(), Some(LoadNote::Quarantined)));
+}

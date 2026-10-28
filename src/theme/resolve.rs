@@ -1,6 +1,6 @@
 //! `Appearance` to concrete colors. No GPUI import.
 
-use super::contrast::Rgb;
+use super::contrast::{Rgb, contrast};
 use super::palette::{Banner, NeutralSet, accent, banner, neutral, slot};
 use super::rules::{calendar_slots, repair};
 use crate::domain::event::CalendarId;
@@ -12,6 +12,14 @@ pub struct CalendarTheme {
     pub dot: Rgb,
     pub tint: Rgb,
     pub text: Rgb,
+    /// The check drawn on a `dot` fill: see `check_color`.
+    pub check: Rgb,
+}
+
+/// The mark on a calendar-colored fill: white or the page color, whichever reads better on `dot`.
+/// Dark-scheme dots are lighter, so a white check would not hold 3:1 there.
+pub fn check_color(dot: Rgb, n: &NeutralSet) -> Rgb {
+    if contrast(Rgb::WHITE, dot) >= contrast(n.page, dot) { Rgb::WHITE } else { n.page }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -60,6 +68,7 @@ pub fn resolve_repaired(appearance: &Appearance, system_dark: bool) -> (Theme, O
             dot: s.dot,
             tint: s.tint.over(n.surface),
             text: s.text,
+            check: check_color(s.dot, &n),
         }
     });
     let ink = n.t1;

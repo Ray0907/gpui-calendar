@@ -179,17 +179,31 @@ pub fn default_path() -> Option<PathBuf> {
     Some(base.join(APP_DIR).join(FILE_NAME))
 }
 
+/// What `Store::load_noted` did to the file besides reading it; either way a `.bak` copy of the original exists.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LoadNote {
+    /// Not usable (corrupt, invalid text or another version): moved aside, defaults returned.
+    Quarantined,
+    /// Usable, but some fields were dropped or repaired.
+    Repaired,
+}
+
 impl Store {
     /// See the module docs for what is salvaged. `Err` only for read errors other than
     /// missing or invalid bytes, and for failing to write a backup.
     pub fn load(path: &Path) -> io::Result<Store> {
+        Self::load_noted(path).map(|(store, _)| store)
+    }
+
+    /// Like `load`, plus whether the original file was kept as a backup on the way.
+    pub fn load_noted(path: &Path) -> io::Result<(Store, Option<LoadNote>)> {
         remove_stale_temps(path);
         let text = match fs::read_to_string(path) {
             Ok(t) => t,
-            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Store::default()),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok((Store::default(), None)),
             Err(e) if e.kind() == io::ErrorKind::InvalidData => {
                 quarantine(path)?;
-                return Ok(Store::default());
+                return Ok((Store::default(), Some(LoadNote::Quarantined)));
             }
             Err(e) => return Err(e),
         };
@@ -198,11 +212,11 @@ impl Store {
                 if lossy {
                     backup(path)?;
                 }
-                Ok(store)
+                Ok((store, lossy.then_some(LoadNote::Repaired)))
             }
             None => {
                 quarantine(path)?;
-                Ok(Store::default())
+                Ok((Store::default(), Some(LoadNote::Quarantined)))
             }
         }
     }

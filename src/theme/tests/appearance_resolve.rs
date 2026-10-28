@@ -132,3 +132,27 @@ fn appearance_resolved_themes_keep_accent_and_ink_readable() {
         }
     }
 }
+
+#[test]
+fn appearance_calendar_check_reads_on_every_dot_in_both_schemes() {
+    use crate::theme::palette::SLOTS;
+    use crate::theme::resolve::check_color;
+    for dark in [false, true] {
+        for nt in NEUTRALS {
+            let n = neutral(nt, dark);
+            for c in SLOTS {
+                let dot = slot(c).scheme(dark).dot;
+                let ratio = contrast(check_color(dot, n), dot);
+                assert!(ratio >= 3.0, "{c:?} dark={dark} {nt:?}: check {ratio:.2}:1");
+            }
+        }
+    }
+    // The theme hands the views that same color for each calendar.
+    for sys in [false, true] {
+        let t = resolve(&with_mode(Mode::System), sys);
+        for id in [WORK, PERSONAL, SIDE] {
+            let k = t.cal(id).unwrap();
+            assert_eq!(k.check, check_color(k.dot, &t.neutral));
+        }
+    }
+}

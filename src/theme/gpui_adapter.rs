@@ -9,13 +9,39 @@
 //! `Theme` needs a running `App` (`Theme::apply_semantic_tokens`) and is not done here.
 
 use gpui_kit::base::ColorTokens;
-use gpui_kit::{Hsla, rgb};
+use gpui_kit::{BoxShadow, Hsla, point, px, rgb};
 
 use super::contrast::Rgb;
 use super::resolve::Theme;
 
 pub fn hsla(c: Rgb) -> Hsla {
     rgb(c.to_u32()).into()
+}
+
+/// Guide fixed marks that do not follow the theme: the check drawn on a colored fill.
+pub fn on_color() -> Hsla {
+    hsla(Rgb::WHITE)
+}
+
+/// A black scrim of the given opacity (banner button, shadows).
+pub fn shade(alpha: f32) -> Hsla {
+    hsla(Rgb(0, 0, 0)).opacity(alpha)
+}
+
+/// Banner button: the dark scrim behind the label and the light wash on its chevron chip.
+pub fn banner_scrim() -> Hsla {
+    shade(0.28)
+}
+
+pub fn banner_wash() -> Hsla {
+    on_color().opacity(0.18)
+}
+
+/// Guide 5 elevation token: the soft shadow used on cards and the view switch.
+pub fn elevation(t: &Theme) -> Vec<BoxShadow> {
+    let (near, far) = if t.dark { (0.4, 0.5) } else { (0.04, 0.14) };
+    let shadow = |alpha, y, blur, spread| BoxShadow { color: shade(alpha), offset: point(px(0.), px(y)), blur_radius: px(blur), spread_radius: px(spread), inset: false };
+    vec![shadow(near, 1., 2., 0.), shadow(far, 10., 24., -10.)]
 }
 
 pub fn color_tokens(t: &Theme) -> ColorTokens {
