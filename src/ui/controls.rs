@@ -5,7 +5,7 @@
 use gpui_kit::component::{Icon, IconName, Sizable};
 use gpui_kit::{
     App, BoxShadow, ElementId, FontWeight, Hsla, InteractiveElement, IntoElement, ParentElement, PathBuilder,
-    Role, StatefulInteractiveElement, Styled, TestSupportExt, Window, canvas, div, point, px
+    Role, StatefulInteractiveElement, StyleRefinement, Styled, TestSupportExt, Window, canvas, div, point, px
 };
 
 use super::a11y::Disabled;
@@ -18,6 +18,12 @@ const RING_GAP_PX: f32 = 2.;
 pub(super) fn ring(gap: Hsla, color: Hsla) -> Vec<BoxShadow> {
     let s = |color, spread| BoxShadow { color, offset: point(px(0.), px(0.)), blur_radius: px(0.), spread_radius: px(spread), inset: false };
     vec![s(gap, RING_GAP_PX), s(color, RING_GAP_PX + RING_PX)]
+}
+
+/// The focus-visible style: the ring plus a fill of `fill`, because a shadow shows through a box with no fill of its own.
+/// A control with its own fill passes it again via `.focus_visible(focus_ring(gap, ring_color, fill))`.
+pub(super) fn focus_ring(gap: Hsla, ring_color: Hsla, fill: Hsla) -> impl FnOnce(StyleRefinement) -> StyleRefinement {
+    move |s| s.bg(fill).shadow(ring(gap, ring_color))
 }
 
 /// A 1px outline drawn outside the box, so marking a cell never changes its size.
@@ -59,11 +65,8 @@ pub fn control_disabled<I: Into<ElementId>, L: Into<gpui_kit::SharedString>>(
         .role(role)
         .aria_label(label)
         .cursor_pointer()
-        // The ring's shadow shows through a box with no fill: the gap color is what is behind it, so filling with it
-        // is invisible, and a caller's own `bg` (set after) takes over.
-        .bg(gap)
         .active(|s| s.opacity(0.85))
-        .focus_visible(move |s| s.shadow(ring(gap, ring_color)))
+        .focus_visible(focus_ring(gap, ring_color, gap))
 }
 
 pub fn icon(name: IconName, color: Hsla, size: f32) -> Icon {

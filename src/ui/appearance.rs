@@ -6,7 +6,7 @@ use gpui_kit::{
     StatefulInteractiveElement, Styled, TestSupportExt, Toggled, Window, div, point, px, prelude::*,
 };
 
-use super::controls::{c, control, control_disabled, icon, on_color, shape, shape_of};
+use super::controls::{c, control, control_disabled, focus_ring, icon, on_color, shape, shape_of};
 use super::shell::Shell;
 use crate::store::CALENDAR_NAMES;
 use crate::store::settings::{Accent, CalendarColor, Mode, Neutral};
@@ -94,7 +94,7 @@ impl Shell {
             .border_color(if on { c(t.ink) } else { c(n.border) })
             .text_size(px(12.))
             .font_weight(FontWeight::SEMIBOLD)
-            .when(on, |d| d.bg(c(t.ink)).text_color(c(t.on_ink)))
+            .when(on, |d| d.bg(c(t.ink)).text_color(c(t.on_ink)).focus_visible(focus_ring(c(n.surface), c(t.ring), c(t.ink))))
             .aria_toggled(if on { Toggled::True } else { Toggled::False })
             .child(label)
             .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {

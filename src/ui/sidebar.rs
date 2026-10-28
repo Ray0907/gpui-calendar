@@ -8,7 +8,7 @@ use gpui_kit::{
 };
 use gpui_kit::{StatefulInteractiveElement, TestSupportExt, prelude::*};
 
-use super::controls::{banner_scrim, banner_wash, c, control, elevation, eyebrow, icon, on_color, ring, ring_mark, shape, shape_of};
+use super::controls::{banner_scrim, banner_wash, c, control, elevation, eyebrow, focus_ring, icon, on_color, ring, ring_mark, shape, shape_of};
 use super::model::MiniDay;
 use super::popover::{Origin, anchor_mark};
 use super::shell::Shell;
@@ -71,6 +71,7 @@ impl Shell {
             .justify_center()
             .rounded_full()
             .bg(c(t.ink))
+            .focus_visible(focus_ring(c(t.neutral.surface), c(t.ring), c(t.ink)))
             .child(icon(IconName::Plus, c(t.on_ink), 16.))
             .child(anchor_mark(&self.anchors, "add".into()))
             .on_click(cx.listener(|this, e: &ClickEvent, window, cx| {
@@ -245,7 +246,7 @@ impl Shell {
             .aria_toggled(if d.selected { Toggled::True } else { Toggled::False });
         // Both marks can apply to one day: the accent circle (today) and the ink ring (selected).
         if d.accent_fill() {
-            b = b.aria_description("current date").bg(c(t.accent)).text_color(c(t.accent_on)).font_weight(FontWeight::SEMIBOLD);
+            b = b.aria_description("current date").bg(c(t.accent)).text_color(c(t.accent_on)).font_weight(FontWeight::SEMIBOLD).focus_visible(focus_ring(c(n.surface), c(t.ring), c(t.accent)));
         }
         if d.ring() {
             b = b.shadow(vec![ring_mark(c(t.ink))]); // a shadow, not a border: the cell keeps its size

@@ -9,7 +9,7 @@ use gpui_kit::{
 
 use super::Form;
 use crate::domain::form::Field;
-use crate::ui::controls::{c, control, icon, shape, shape_of};
+use crate::ui::controls::{c, control, focus_ring, icon, shape, shape_of};
 use crate::ui::shell::Shell;
 use crate::theme::resolve::Theme;
 
@@ -85,7 +85,7 @@ impl Shell {
                     .rounded(px(12.))
                     .border(px(if on { 2. } else { 1. }))
                     .border_color(if on { c(t.ink) } else { c(t.neutral.border) })
-                    .when(on, |s| s.bg(c(t.neutral.subtle)))
+                    .when(on, |s| s.bg(c(t.neutral.subtle)).focus_visible(focus_ring(c(t.neutral.surface), c(t.ring), c(t.neutral.subtle))))
                     .child(div().flex().items_center().gap(px(7.)).text_size(px(13.)).font_weight(FontWeight::SEMIBOLD).child(shape(shape_of(id), dot)).child(name.clone()))
                     .child(div().mt(px(2.)).text_size(px(12.)).text_color(c(t.neutral.t3)).child(format!("{n} event{}", if n == 1 { "" } else { "s" })))
                     .when(on, |s| {
@@ -150,8 +150,8 @@ impl Shell {
             .items_center()
             .rounded(px(FIELD_R))
             .font_weight(FontWeight::SEMIBOLD)
-            .when(primary, |s| s.bg(c(t.ink)).text_color(c(t.on_ink)))
-            .when(!primary, |s| s.bg(c(t.neutral.surface)).border_1().border_color(c(t.neutral.border)))
+            .when(primary, |s| s.bg(c(t.ink)).text_color(c(t.on_ink)).focus_visible(focus_ring(c(t.neutral.subtle), c(t.ring), c(t.ink))))
+            .when(!primary, |s| s.bg(c(t.neutral.surface)).border_1().border_color(c(t.neutral.border)).focus_visible(focus_ring(c(t.neutral.subtle), c(t.ring), c(t.neutral.surface))))
             .child(name)
     }
 }
