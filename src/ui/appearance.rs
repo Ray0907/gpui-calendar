@@ -108,7 +108,7 @@ impl Shell {
         let n = &t.neutral;
         let on = self.model.store.settings.appearance.neutral == nt;
         let set = neutral(nt, t.dark);
-        let chips = [set.t1, set.t3, set.line].map(|x| div().size(px(12.)).rounded_full().ml(px(-3.)).bg(c(x)).border_1().border_color(c(n.line)));
+        let chips = [set.page, set.t3, set.t1].map(|x| div().size(px(12.)).rounded_full().ml(px(-3.)).bg(c(x)).border_1().border_color(c(n.line)));
         control(format!("neutral-{nt:?}"), Role::Button, format!("{nt:?}"), c(n.surface), c(t.ring), window, cx)
             .h(px(40.))
             .px(px(14.))

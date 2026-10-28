@@ -332,17 +332,20 @@ fn sync_parent(path: &Path) -> io::Result<()> {
 fn parse_event(v: &Value, calendars: &[Calendar]) -> Option<(Event, bool)> {
     let obj = v.as_object();
     let mut unknown = false;
-    flag_unknown(obj, &["id", "title", "calendar", "start", "end", "all_day"], &mut unknown);
+    flag_unknown(obj, &["id", "title", "calendar", "start", "end", "all_day", "notes"], &mut unknown);
     let id: u64 = get(obj, "id")?;
     let calendar: CalendarId = get(obj, "calendar").filter(|c| calendars.iter().any(|k| k.id == *c))?;
     let start: NaiveDateTime = get(obj, "start")?;
     let title = get::<String>(obj, "title");
     let all_day = get::<bool>(obj, "all_day");
     let end = get::<NaiveDateTime>(obj, "end").filter(|e| *e > start);
-    let repaired = unknown || title.is_none() || all_day.is_none() || end.is_none();
+    // Absent or null is a file from before notes; present but not text is repaired.
+    let notes = get::<String>(obj, "notes");
+    let bad_notes = notes.is_none() && obj.is_some_and(|o| o.get("notes").is_some_and(|n| !n.is_null()));
+    let repaired = unknown || bad_notes || title.is_none() || all_day.is_none() || end.is_none();
     let all_day = all_day.unwrap_or(false);
     let end = end.unwrap_or(start + if all_day { Duration::days(1) } else { Duration::minutes(SNAP_MINUTES as i64) });
-    Some((Event { id, title: title.unwrap_or_default(), calendar, start, end, all_day }, repaired))
+    Some((Event { id, title: title.unwrap_or_default(), calendar, start, end, all_day, notes: notes.unwrap_or_default() }, repaired))
 }
 
 /// Give repeated ids fresh ones (first occurrence keeps its id). True if any changed.

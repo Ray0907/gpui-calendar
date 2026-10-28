@@ -46,11 +46,16 @@ impl Model {
         (self.anchor.year(), self.anchor.month())
     }
 
-    /// A new all-day event from a drag across days; `None` if no calendar is switched on.
+    /// The event a create drag would store, under a placeholder id: what the views draw while dragging.
+    pub fn ghost_event(&self, p: &Preview) -> Option<Event> {
+        self.new_event_calendar().map(|calendar| Event::from_preview(u64::MAX, NEW_EVENT_TITLE, calendar, p))
+    }
+
+    /// A new event from a create drag; `None` if no calendar is switched on.
     pub fn create_from_drag(&mut self, p: Preview) -> Option<u64> {
-        let calendar = self.new_event_calendar()?;
+        let ghost = self.ghost_event(&p)?;
         let id = self.next_event_id();
-        self.store.events.push(Event { id, title: NEW_EVENT_TITLE.into(), calendar, start: p.start, end: p.end, all_day: p.all_day });
+        self.store.events.push(Event { id, ..ghost });
         self.persist();
         Some(id)
     }

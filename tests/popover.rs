@@ -16,7 +16,11 @@ const OCT_26: usize = 520;
 const STANDUP: &str = "Standup, 09:30, Work";
 
 fn open_month(cx: &mut TestAppContext, name: &str) -> (AnyWindowHandle, Entity<Shell>) {
-    let (h, shell) = open_sized(cx, &tmp(name), (1280., 900.), Rc::new(Cell::new(at(28, 17, 35))), |_| {});
+    open_month_wide(cx, name, 1280.)
+}
+
+fn open_month_wide(cx: &mut TestAppContext, name: &str, width: f32) -> (AnyWindowHandle, Entity<Shell>) {
+    let (h, shell) = open_sized(cx, &tmp(name), (width, 900.), Rc::new(Cell::new(at(28, 17, 35))), |_| {});
     cx.update_window(h, |_, w, cx| (0..2).for_each(|_| w.render_frame(cx))).unwrap();
     (h, shell)
 }
@@ -51,7 +55,8 @@ fn on_disk(name: &str) -> Vec<Event> {
 
 #[gpui_kit::test]
 fn clicking_a_month_chip_opens_the_popover_on_that_event(cx: &mut TestAppContext) {
-    let (h, shell) = open_month(cx, "pop-open");
+    // The 720px card only fits beside a chip in a wide window; narrower ones center it (next test).
+    let (h, shell) = open_month_wide(cx, "pop-open", 1920.);
     assert!(!is_open(cx, &shell));
     cx.update_window(h, |_, w, cx| w.click(format!("month-ev-4-{OCT_26}"), cx)).unwrap();
     assert!(is_open(cx, &shell));

@@ -13,6 +13,7 @@ use super::model::MiniDay;
 use super::popover::{Origin, anchor_mark};
 use super::shell::Shell;
 use crate::store::Calendar;
+use crate::theme::palette::AVATAR;
 use crate::theme::resolve::Theme;
 
 impl Shell {
@@ -294,7 +295,7 @@ impl Shell {
                     .flex_none()
                     .size(px(22.))
                     .rounded_full()
-                    .bg(c(n.line)),
+                    .bg(linear_gradient(135., linear_color_stop(c(AVATAR[0]), 0.), linear_color_stop(c(AVATAR[1]), 1.))),
             )
             .child(div().flex_1().child("John Doe"))
             .child(account)

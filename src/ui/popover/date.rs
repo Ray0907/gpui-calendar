@@ -8,7 +8,7 @@ use gpui_kit::{
 };
 
 use super::Form;
-use super::view::{FIELD_H, error_note, label};
+use super::fields::{FIELD_H, error_note, label};
 use crate::domain::form::{Field, parse_date};
 use crate::theme::resolve::Theme;
 use crate::ui::shell::Shell;

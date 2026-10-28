@@ -57,6 +57,7 @@ fn custom() -> Store {
         chrono::NaiveDate::from_ymd_opt(2027, 1, 5).unwrap().and_hms_opt(9, 15, 0).unwrap(),
         chrono::NaiveDate::from_ymd_opt(2027, 1, 5).unwrap().and_hms_opt(10, 0, 0).unwrap(),
     ));
+    s.events.last_mut().unwrap().notes = "Bring the slides.\nSecond line.".into();
     s.calendars[2].visible = false;
     s.settings.week_start = Weekday::Sun;
     s.settings.time_format = TimeFormat::H12;

@@ -265,3 +265,34 @@ fn the_well_for_all_day_counts_days() {
     x.end_date = "2026-10-30".into();
     assert_eq!(summary(&x, d(28), true), Some(("Today – Fri, Oct 30".into(), "All day · 3 days · Wednesday, Oct 28".into())));
 }
+
+#[test]
+fn notes_travel_through_the_draft_for_timed_and_all_day_events() {
+    let mut e = lunch();
+    e.notes = "Table for 4\nBring the menu".into();
+    let mut x = Draft::for_event(&e, true);
+    assert_eq!(x.notes, e.notes);
+    assert_eq!(x.check(7, true), Ok(e));
+    assert_eq!(
+        Draft::new_at(dt(28, 9, 0), 0, true).notes,
+        "",
+        "a new event starts without notes"
+    );
+    let mut a = all_day(d(10));
+    a.title = "Trip".into();
+    a.notes = "Passport".into();
+    assert_eq!(a.check(1, true).unwrap().notes, "Passport");
+    x.notes = String::new();
+    assert_eq!(x.check(7, true).unwrap().notes, "");
+}
+
+#[test]
+fn undo_of_a_notes_edit_restores_the_old_notes() {
+    let mut events = vec![lunch()];
+    let mut after = lunch();
+    after.notes = "New".into();
+    let edit = save(&mut events, after);
+    assert_eq!(events[0].notes, "New");
+    edit.revert(&mut events);
+    assert_eq!(events[0].notes, "");
+}

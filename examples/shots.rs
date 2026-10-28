@@ -154,7 +154,7 @@ fn busy_week() -> Vec<gpui_calendar::domain::event::Event> {
         let start = day(d).and_hms_opt(h, m, 0).expect("time");
         Event::timed(id, title, cal, start, start + chrono::Duration::minutes(mins))
     };
-    vec![
+    let mut events = vec![
         Event::all_day(1, "Offsite", WORK, day(27), day(28)),
         Event::all_day(2, "Anna's birthday", PERSONAL, day(31), day(31)),
         timed(3, "Daily stand-up", WORK, 26, 9, 30, 30),
@@ -174,7 +174,10 @@ fn busy_week() -> Vec<gpui_calendar::domain::event::Event> {
         timed(17, "Ship weekly update", SIDE, 30, 16, 30, 30),
         timed(18, "Long run", PERSONAL, 31, 8, 0, 60),
         timed(19, "Water plants", PERSONAL, 31, 10, 0, 30),
-    ]
+    ];
+    // The popover shots open this one: its notes show in the Notes section.
+    events.iter_mut().find(|e| e.id == 12).expect("event 12").notes = "Walk through the new month grid.".into();
+    events
 }
 
 /// October's events plus invented ones across the other months: single dots, all three shapes on one day, a bar over New Year.

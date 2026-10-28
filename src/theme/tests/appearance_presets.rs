@@ -133,3 +133,8 @@ fn appearance_defaults_match_guide() {
     assert_eq!(blue.hue, 265);
     assert_eq!(banner(Neutral::Warm).to, Rgb::hex("#3a3126"));
 }
+
+#[test]
+fn appearance_avatar_gradient_is_the_mocks() {
+    assert_eq!(AVATAR, [Rgb::hex("#a78bfa"), Rgb::hex("#60a5fa")]);
+}

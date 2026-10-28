@@ -447,3 +447,16 @@ fn move_all_day_and_grid_to_all_day_row_still_commit() {
     g.update(Pos::AllDay(d(2026, 10, 30)));
     assert!(g.end().is_some());
 }
+
+#[test]
+fn a_created_event_from_a_preview_equals_the_all_day_and_timed_constructors() {
+    let mut g = Drag::create(Pos::Month(d(2026, 10, 27)));
+    g.update(Pos::Month(d(2026, 10, 29)));
+    let p = g.preview();
+    assert!(p.all_day);
+    assert_eq!(Event::from_preview(5, "New", 1, &p), Event::all_day(5, "New", 1, d(2026, 10, 27), d(2026, 10, 29)));
+    let mut g = Drag::create(Pos::Grid(d(2026, 10, 28), min(9, 7)));
+    g.update(Pos::Grid(d(2026, 10, 28), min(10, 20)));
+    let p = g.preview();
+    assert_eq!(Event::from_preview(6, "New", 0, &p), Event::timed(6, "New", 0, dt(2026, 10, 28, 9, 0), dt(2026, 10, 28, 10, 30)));
+}

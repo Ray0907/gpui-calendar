@@ -3,6 +3,7 @@
 //! side; `view` draws it.
 
 mod date;
+mod fields;
 mod place;
 mod view;
 
@@ -11,7 +12,7 @@ pub(super) use place::{Anchors, anchor_mark, anchor_reset};
 use std::cell::RefCell;
 use std::time::Duration;
 
-use gpui_kit::component::input::{InputEvent, InputState};
+use gpui_kit::component::input::{InputEvent, InputState, TextareaState};
 use gpui_kit::{App, AppContext, Bounds, Context, Entity, FocusHandle, Pixels, Point, Subscription, Window};
 
 use self::date::Dates;
@@ -39,6 +40,7 @@ struct Inputs {
     title: Entity<InputState>,
     start_time: Entity<InputState>,
     end_time: Entity<InputState>,
+    notes: Entity<TextareaState>,
 }
 
 impl Inputs {
@@ -55,7 +57,8 @@ impl Inputs {
 
 /// The open popover.
 pub(super) struct Form {
-    /// Calendar, all-day and id are live here; the text fields are read from `inputs`.
+    /// Calendar, all-day and id are live here. The text fields, notes included, live only in `inputs`
+    /// (`draft`'s copies are stale or empty after open): always go through `read`.
     draft: Draft,
     errors: Vec<FormError>,
     inputs: Inputs,
@@ -81,6 +84,7 @@ impl Form {
             start_time: text(&self.inputs.start_time),
             end_date: self.dates.text(Field::EndDate, cx),
             end_time: text(&self.inputs.end_time),
+            notes: self.inputs.notes.read(cx).value().to_string(),
             ..self.draft.clone()
         }
     }
@@ -116,6 +120,14 @@ impl Shell {
     /// Open the form on `draft` as a keyboard open would, text and all (the days too, readable or not).
     pub fn show_draft(&mut self, draft: Draft, window: &mut Window, cx: &mut Context<Self>) {
         self.open_form(draft, None, Origin::Key, window, cx);
+    }
+
+    /// Replace the notes, as typing would.
+    pub fn popover_set_notes(&mut self, text: &str, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(f) = self.pop.as_ref() {
+            f.inputs.notes.update(cx, |s, cx| s.set_value(text.to_string(), window, cx));
+            cx.notify();
+        }
     }
 
     pub fn toast_text(&self) -> Option<&str> {
@@ -182,7 +194,7 @@ impl Shell {
         self.open_form(draft, anchor, from, window, cx);
     }
 
-    fn open_form(&mut self, draft: Draft, anchor: Option<Bounds<Pixels>>, from: Origin, window: &mut Window, cx: &mut Context<Self>) {
+    fn open_form(&mut self, mut draft: Draft, anchor: Option<Bounds<Pixels>>, from: Origin, window: &mut Window, cx: &mut Context<Self>) {
         self.toast = None; // an undo offered earlier no longer applies once something else is edited
         let return_to = self.pop.take().and_then(|f| f.return_to).or_else(|| window.focused(cx)).or_else(|| Some(self.grid_focus()));
         let input = |placeholder: &'static str, value: &str, window: &mut Window, cx: &mut Context<Self>| {
@@ -193,7 +205,15 @@ impl Shell {
                 s
             })
         };
+        let textarea = |placeholder: &'static str, value: String, window: &mut Window, cx: &mut Context<Self>| {
+            cx.new(|cx| {
+                let mut s = TextareaState::new(window, cx).placeholder(placeholder);
+                s.set_value(value, window, cx);
+                s
+            })
+        };
         let inputs = Inputs {
+            notes: textarea("Add notes", std::mem::take(&mut draft.notes), window, cx),
             title: input("Add a title", &draft.title, window, cx),
             start_time: input("14:00", &draft.start_time, window, cx),
             end_time: input("15:00", &draft.end_time, window, cx),

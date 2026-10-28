@@ -106,14 +106,7 @@ impl Shell {
                 Some(id) => events.iter_mut().filter(|e| e.id == id).for_each(|e| *e = w.drag.apply(e)),
                 None if w.drag.moved() => {
                     let p = w.drag.preview();
-                    events.extend(self.model.new_event_calendar().map(|calendar| Event {
-                        id: u64::MAX,
-                        title: super::model::NEW_EVENT_TITLE.into(),
-                        calendar,
-                        start: p.start,
-                        end: p.end,
-                        all_day: p.all_day,
-                    }));
+                    events.extend(self.model.ghost_event(&p));
                 }
                 None => {}
             }

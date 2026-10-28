@@ -34,6 +34,7 @@ pub struct Draft {
     pub start_time: String,
     pub end_date: String,
     pub end_time: String,
+    pub notes: String,
 }
 
 /// `2026-10-28`.
@@ -79,7 +80,7 @@ impl Draft {
         let (start, end) = (e.start, e.end);
         let (end_date, end_time) = if e.all_day { ((end - Duration::days(1)).date().max(start.date()), nine(hour24, 1)) } else { (end.date(), format_time(end.time(), hour24)) };
         let start_time = if e.all_day { nine(hour24, 0) } else { format_time(start.time(), hour24) };
-        Self { id: Some(e.id), title: e.title.clone(), calendar: e.calendar, all_day: e.all_day, start_date: date_text(start.date()), start_time, end_date: date_text(end_date), end_time }
+        Self { id: Some(e.id), title: e.title.clone(), calendar: e.calendar, all_day: e.all_day, start_date: date_text(start.date()), start_time, end_date: date_text(end_date), end_time, notes: e.notes.clone() }
     }
 
     /// A timed event from `start` snapped down to 15 minutes, one hour long.
@@ -96,6 +97,7 @@ impl Draft {
             start_time: format_time(start.time(), hour24),
             end_date: date_text(end.date()),
             end_time: format_time(end.time(), hour24),
+            notes: String::new(),
         }
     }
 
@@ -114,6 +116,10 @@ impl Draft {
 
     /// The event this form describes, under `id` when it is a new one, or every error found.
     pub fn check(&self, id: u64, hour24: bool) -> Result<Event, Vec<FormError>> {
+        self.build(id, hour24).map(|e| Event { notes: self.notes.clone(), ..e })
+    }
+
+    fn build(&self, id: u64, hour24: bool) -> Result<Event, Vec<FormError>> {
         let mut errs = Vec::new();
         let mut bad = |field, message| errs.push(FormError { field, message });
         let title = self.title.trim();
@@ -148,7 +154,8 @@ impl Draft {
                 if end <= start {
                     bad(Field::EndTime, "The end must be after the start.");
                 } else if errs.is_empty() {
-                    return Ok(Event { id, title: title.into(), calendar: self.calendar, start, end, all_day: false });
+                    // `end` is kept as typed: `Event::timed` would stretch a shorter-than-15-minute event.
+                    return Ok(Event { start, end, ..Event::timed(id, title, self.calendar, start, end) });
                 }
             }
         }

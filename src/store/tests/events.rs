@@ -84,3 +84,37 @@ fn duplicate_id_repair_skips_ids_in_use() {
     assert_eq!(ids.len(), 3);
     assert_eq!(got[2].id, 6, "unique id is never renumbered");
 }
+
+#[test]
+fn file_without_notes_loads_with_empty_notes_and_no_backup() {
+    let (got, nbak) = load_events(vec![event_json(json!({"notes": null}))]);
+    assert_eq!((got.len(), got[0].notes.as_str(), nbak), (1, "", 0));
+}
+
+#[test]
+fn notes_load_and_wrong_typed_notes_are_repaired_to_empty() {
+    let (got, nbak) = load_events(vec![event_json(json!({"notes": "Bring slides"}))]);
+    assert_eq!((got[0].notes.as_str(), nbak), ("Bring slides", 0));
+    let (got, nbak) = load_events(vec![event_json(json!({"notes": 5}))]);
+    assert_eq!((got.len(), got[0].notes.as_str(), nbak), (1, "", 1));
+}
+
+#[test]
+fn empty_notes_are_not_written_and_text_is_() {
+    let t = Tmp::new();
+    let mut s = Store::default();
+    s.events.push(Event::timed(1, "A", 0, chrono::NaiveDate::from_ymd_opt(2027, 1, 5).unwrap().and_hms_opt(9, 0, 0).unwrap(), chrono::NaiveDate::from_ymd_opt(2027, 1, 5).unwrap().and_hms_opt(10, 0, 0).unwrap()));
+    s.save(&t.file()).unwrap();
+    assert!(!fs::read_to_string(t.file()).unwrap().contains("\"notes\""));
+    s.events[0].notes = "hi".into();
+    s.save(&t.file()).unwrap();
+    assert!(fs::read_to_string(t.file()).unwrap().contains("\"notes\": \"hi\""));
+}
+
+#[test]
+fn explicit_null_notes_load_silently() {
+    let mut e = event_json(json!({}));
+    e["notes"] = Value::Null;
+    let (got, nbak) = load_events(vec![e]);
+    assert_eq!((got.len(), got[0].notes.as_str(), nbak), (1, "", 0));
+}

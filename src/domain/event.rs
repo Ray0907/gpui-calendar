@@ -4,6 +4,7 @@ use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 use serde::{Deserialize, Serialize};
 
 use super::dates::DateRange;
+use super::drag::Preview;
 use super::layout::SNAP_MINUTES;
 
 pub type CalendarId = u8;
@@ -18,6 +19,9 @@ pub struct Event {
     pub start: NaiveDateTime,
     pub end: NaiveDateTime,
     pub all_day: bool,
+    /// Free text; files saved before notes existed load with it empty.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub notes: String,
 }
 
 pub const MINUTES_PER_DAY: u32 = 1440;
@@ -26,7 +30,7 @@ impl Event {
     /// A timed event is at least 15 minutes long.
     pub fn timed(id: u64, title: &str, calendar: CalendarId, start: NaiveDateTime, end: NaiveDateTime) -> Self {
         let end = end.max(start + Duration::minutes(SNAP_MINUTES as i64));
-        Self { id, title: title.into(), calendar, start, end, all_day: false }
+        Self { id, title: title.into(), calendar, start, end, all_day: false, notes: String::new() }
     }
 
     /// Covers `first..=last` (a `last` before `first` means a single day).
@@ -39,6 +43,16 @@ impl Event {
             start: first.and_time(NaiveTime::MIN),
             end: (last + Duration::days(1)).and_time(NaiveTime::MIN),
             all_day: true,
+            notes: String::new(),
+        }
+    }
+
+    /// A new event as a create drag previewed it.
+    pub fn from_preview(id: u64, title: &str, calendar: CalendarId, p: &Preview) -> Self {
+        if p.all_day {
+            Self::all_day(id, title, calendar, p.start.date(), (p.end - Duration::days(1)).date())
+        } else {
+            Self::timed(id, title, calendar, p.start, p.end)
         }
     }
 
