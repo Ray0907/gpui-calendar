@@ -13,8 +13,13 @@ use super::model::MiniDay;
 use super::popover::{Origin, anchor_mark};
 use super::shell::Shell;
 use crate::store::Calendar;
+use crate::theme::contrast::over;
 use crate::theme::palette::AVATAR;
 use crate::theme::resolve::Theme;
+
+/// gpui's diagonal gradient line is the box side, CSS's is side * sqrt 2: start the stops at CSS's 14.6% and 85.4%, (1 - 1/sqrt 2) / 2 and its complement.
+const AVATAR_STOP_NEAR: f64 = 0.1464;
+const AVATAR_STOP_FAR: f64 = 1. - AVATAR_STOP_NEAR;
 
 impl Shell {
     pub(super) fn sidebar(&mut self, t: &Theme, narrow: bool, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
@@ -299,7 +304,7 @@ impl Shell {
                     .flex_none()
                     .size(px(22.))
                     .rounded_full()
-                    .bg(linear_gradient(135., linear_color_stop(c(AVATAR[0]), 0.), linear_color_stop(c(AVATAR[1]), 1.))),
+                    .bg(linear_gradient(135., linear_color_stop(c(over(AVATAR[1], AVATAR_STOP_NEAR, AVATAR[0])), 0.), linear_color_stop(c(over(AVATAR[1], AVATAR_STOP_FAR, AVATAR[0])), 1.))),
             )
             .child(div().flex_1().child("John Doe"))
             .child(account)

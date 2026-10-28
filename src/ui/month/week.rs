@@ -123,7 +123,8 @@ impl Shell {
             .text_size(px(12.))
             .font_weight(FontWeight::MEDIUM)
             .cursor_pointer()
-            .active(|s| s.opacity(0.85))
+            // The ring shadow would show through a fill at 85% opacity, so a pressed chip drops it.
+            .active(|s| s.opacity(0.85).shadow(vec![]))
             .when(focused, |s| s.bg(c(t.neutral.surface)).shadow(ring(c(t.neutral.surface), c(t.ring))))
             .on_mouse_down(MouseButton::Left, cx.listener(move |this, _: &MouseDownEvent, _, _| this.press_event(id)))
             .child(anchor_mark(&self.anchors, format!("ev-{id}")));

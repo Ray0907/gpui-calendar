@@ -87,6 +87,10 @@ impl Shell {
                     .test_support()
                     .aria_label(month.as_ref().map_or(year.clone(), |m| format!("{m} {year}")))
                     .flex_1()
+                    // The title gives way first: without a zero minimum width the controls are pushed off a narrow window.
+                    .min_w(px(0.))
+                    .overflow_hidden()
+                    .whitespace_nowrap()
                     .flex()
                     .items_baseline()
                     .gap(px(8.))

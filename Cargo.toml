@@ -20,3 +20,19 @@ harness = false
 [[test]]
 name = "focus_fill"
 harness = false
+
+[[test]]
+name = "tint_pixels"
+harness = false
+
+[[test]]
+name = "press_state"
+harness = false
+
+[[test]]
+name = "narrow"
+harness = false
+
+[[test]]
+name = "ax_audit"
+harness = false
