@@ -3,14 +3,10 @@ use crate::theme::contrast::Rgb;
 use crate::theme::gpui_adapter::{color_tokens, hsla};
 use crate::theme::palette::NEUTRALS;
 use crate::theme::resolve::resolve;
-use gpui_kit::base::ColorTokens;
 
 #[test]
 fn appearance_adapter_maps_every_token() {
-    for (mode, base) in [
-        (Mode::Light, ColorTokens::light()),
-        (Mode::Dark, ColorTokens::dark()),
-    ] {
+    for mode in [Mode::Light, Mode::Dark] {
         for neutral in NEUTRALS {
             let t = resolve(
                 &Appearance {
@@ -45,12 +41,9 @@ fn appearance_adapter_maps_every_token() {
             assert_eq!(k.border, hsla(n.line), "border {ctx}");
             assert_eq!(k.input, hsla(n.border), "input {ctx}");
             assert_eq!(k.ring, hsla(t.ring), "ring {ctx}");
-            assert_eq!(k.destructive, base.destructive, "destructive {ctx}");
-            assert_eq!(
-                k.destructive_foreground, base.destructive_foreground,
-                "destructive_foreground {ctx}"
-            );
-            assert_eq!(k.selection, base.selection, "selection {ctx}");
+            assert_eq!(k.destructive, hsla(t.ink), "destructive {ctx}");
+            assert_eq!(k.destructive_foreground, hsla(t.on_ink), "destructive_foreground {ctx}");
+            assert_eq!(k.selection, hsla(t.ink).opacity(0.25), "selection {ctx}");
         }
     }
 }

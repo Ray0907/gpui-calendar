@@ -19,7 +19,7 @@ fn main() {}
 
 #[cfg(target_os = "macos")]
 mod m {
-    use std::collections::HashSet;
+    use std::collections::{HashMap, HashSet};
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -99,7 +99,9 @@ mod m {
 
     /// The most common colour: what the element is painted with.
     fn interior(all: &[Rgb]) -> Rgb {
-        *all.iter().max_by_key(|&&a| all.iter().filter(|&&p| p == a).count()).unwrap()
+        let mut count: HashMap<u32, usize> = HashMap::new();
+        all.iter().for_each(|p| *count.entry(p.to_u32()).or_default() += 1);
+        *all.iter().max_by_key(|p| count[&p.to_u32()]).unwrap()
     }
 
     /// The element's interior must not be the ring colour, and its text must read against what is there.

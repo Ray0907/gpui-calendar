@@ -1,22 +1,22 @@
-//! Maps the resolved theme onto gpui-kit's `ColorTokens`. The only theme file that imports gpui-kit.
+//! Maps the resolved theme onto gpui-kit's `ColorTokens`. The only theme file that imports gpui-kit besides `token_map`.
 //!
-//! Mapped: background, foreground, surface(+foreground), primary(+foreground) = ink, secondary
-//! (+foreground) = field, muted(+foreground), accent(+foreground) = subtle hover wash, border = line,
-//! input = field outline, ring.
-//! Not mapped, left at gpui-kit's light/dark default: `destructive`, `destructive_foreground`,
-//! `selection` (the guide has no such roles). The calendar accent (today marker), calendar colors and
-//! the banner have no gpui-kit slot; views read them from `Theme`. Applying the tokens to the global
-//! `Theme` needs a running `App` (`Theme::apply_semantic_tokens`) and is not done here.
+//! All 18 tokens come from roles: background, foreground, surface(+foreground), primary(+foreground) = ink,
+//! secondary(+foreground) = field, muted(+foreground), accent(+foreground) = subtle hover wash, border = line,
+//! input = field outline, ring, destructive(+foreground) = ink family (the guide has no destructive color),
+//! selection = ink at 25%. `Theme::apply_semantic_tokens` writes only 17 of the library's 139 colors; the other
+//! 122 are written by `token_map::theme_colors`. The calendar accent (today marker), calendar colors and the
+//! banner have no library slot; views read them from `Theme`. Applying to the global `Theme` needs a running `App`.
 
 use gpui_kit::base::ColorTokens;
 use gpui_kit::{BoxShadow, Hsla, point, px, rgb};
 
-use super::contrast::{Rgb, over};
+use super::contrast::{Rgb, wash_hover_rgb};
+use super::palette::SCRIM;
 use super::resolve::Theme;
 
 /// `wash-hover` (design-tokens 2): `fg` (t1) at 6% over the control's backdrop.
 pub fn wash_hover(fg: Rgb, backdrop: Rgb) -> Hsla {
-    hsla(over(fg, 0.06, backdrop))
+    hsla(wash_hover_rgb(fg, backdrop))
 }
 
 pub fn hsla(c: Rgb) -> Hsla {
@@ -30,7 +30,7 @@ pub fn on_color() -> Hsla {
 
 /// A black scrim of the given opacity (banner button, shadows).
 pub fn shade(alpha: f32) -> Hsla {
-    hsla(Rgb(0, 0, 0)).opacity(alpha)
+    hsla(SCRIM).opacity(alpha)
 }
 
 /// Banner button: the dark scrim behind the label and the light wash on its chevron chip.
@@ -51,11 +51,6 @@ pub fn elevation(t: &Theme) -> Vec<BoxShadow> {
 
 pub fn color_tokens(t: &Theme) -> ColorTokens {
     let n = &t.neutral;
-    let base = if t.dark {
-        ColorTokens::dark()
-    } else {
-        ColorTokens::light()
-    };
     ColorTokens {
         background: hsla(n.page),
         foreground: hsla(n.t1),
@@ -72,6 +67,8 @@ pub fn color_tokens(t: &Theme) -> ColorTokens {
         border: hsla(n.line),
         input: hsla(n.border),
         ring: hsla(t.ring),
-        ..base
+        destructive: hsla(t.ink),
+        destructive_foreground: hsla(t.on_ink),
+        selection: hsla(t.ink).opacity(0.25),
     }
 }

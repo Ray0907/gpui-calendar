@@ -14,6 +14,7 @@ use super::popover::{Origin, anchor_mark, anchor_reset};
 use super::model::{Command, Model, NO_PATH, Screen, View, command, load_note_text};
 use crate::store::Store;
 use crate::theme::gpui_adapter::color_tokens;
+use crate::theme::token_map::theme_colors;
 use crate::theme::resolve::Theme;
 
 /// Guide 5: minimum window 960 by 600; the sidebar becomes a rail below `RAIL_BELOW`.
@@ -168,6 +169,7 @@ impl Shell {
             let mut tokens = k.semantic_tokens();
             tokens.colors = color_tokens(&theme);
             k.apply_semantic_tokens(&tokens);
+            k.colors = theme_colors(&theme);
         });
     }
 }

@@ -40,3 +40,7 @@ harness = false
 [[test]]
 name = "year_hover"
 harness = false
+
+[[test]]
+name = "date_hover"
+harness = false

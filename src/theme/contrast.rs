@@ -65,6 +65,15 @@ pub fn over(fg: Rgb, alpha: f64, bg: Rgb) -> Rgb {
     Rgb(mix(fg.0, bg.0), mix(fg.1, bg.1), mix(fg.2, bg.2))
 }
 
+/// `wash-hover` and `wash-press` (design-tokens 2): the text color at 6% and 10% over the control's backdrop.
+pub fn wash_hover_rgb(fg: Rgb, backdrop: Rgb) -> Rgb {
+    over(fg, 0.06, backdrop)
+}
+
+pub fn wash_press_rgb(fg: Rgb, backdrop: Rgb) -> Rgb {
+    over(fg, 0.10, backdrop)
+}
+
 /// Shortest distance between two hues on the 360 degree circle.
 pub fn hue_distance(a: u16, b: u16) -> u16 {
     let d = a.abs_diff(b) % 360;

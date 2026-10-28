@@ -50,6 +50,9 @@ pub struct Banner {
     pub secondary: Rgb,
 }
 
+/// The scrim and shadow color: black, alpha set by the role that uses it.
+pub const SCRIM: Rgb = Rgb::hex("#000000");
+
 /// The sidebar avatar's gradient stops (135 degrees), the same in both themes and every tint.
 pub const AVATAR: [Rgb; 2] = [Rgb::hex("#a78bfa"), Rgb::hex("#60a5fa")];
 
