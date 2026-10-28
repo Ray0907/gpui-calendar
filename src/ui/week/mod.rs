@@ -234,9 +234,9 @@ impl Shell {
                     }
                 });
                 let t = this.clone();
-                window.on_mouse_event(move |e: &MouseUpEvent, phase, _, cx| {
+                window.on_mouse_event(move |e: &MouseUpEvent, phase, window, cx| {
                     if phase == DispatchPhase::Bubble && e.button == MouseButton::Left {
-                        t.update(cx, |s, cx| s.week_up(e.position, cx));
+                        t.update(cx, |s, cx| s.week_up(e.position, window, cx));
                     }
                 });
             },
@@ -268,8 +268,8 @@ impl Shell {
                     .track_scroll(&self.week.scroll)
                     // One Tab stop for the whole grid; the arrow keys move inside it.
                     .track_focus(&self.week.focus.clone().tab_stop(true))
-                    .on_key_down(cx.listener(|this, e: &KeyDownEvent, _, cx| {
-                        if !e.keystroke.modifiers.modified() && this.week_key(&e.keystroke.key, cx) {
+                    .on_key_down(cx.listener(|this, e: &KeyDownEvent, window, cx| {
+                        if !e.keystroke.modifiers.modified() && this.week_key(&e.keystroke.key, window, cx) {
                             cx.stop_propagation();
                         }
                     }))

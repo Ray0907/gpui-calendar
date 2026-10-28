@@ -165,9 +165,9 @@ impl Shell {
                     .min_h_0()
                     // One Tab stop for the whole grid; the arrow keys move inside it.
                     .track_focus(&self.month.focus.clone().tab_stop(true))
-                    .on_key_down(cx.listener(|this, e: &KeyDownEvent, _, cx| {
+                    .on_key_down(cx.listener(|this, e: &KeyDownEvent, window, cx| {
                         // Modified arrows (Cmd, Ctrl, Alt, Shift, Fn) belong to the window and the system, not the grid.
-                        if !e.keystroke.modifiers.modified() && this.month_key(&e.keystroke.key, cx) {
+                        if !e.keystroke.modifiers.modified() && this.month_key(&e.keystroke.key, window, cx) {
                             cx.stop_propagation();
                         }
                     }))

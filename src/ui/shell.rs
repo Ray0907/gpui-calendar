@@ -5,11 +5,12 @@ use std::time::Duration;
 use chrono::NaiveDateTime;
 use gpui_kit::component::Theme as KitTheme;
 use gpui_kit::{
-    ClickEvent, Context, FontWeight, InteractiveElement, IntoElement, ParentElement, Render, Role, StatefulInteractiveElement, Styled, TestSupportExt,
+    ClickEvent, Context, FontWeight, InteractiveElement, IntoElement, KeyDownEvent, ParentElement, Render, Role, StatefulInteractiveElement, Styled, TestSupportExt,
     Window, WindowAppearance, WindowOptions, div, px, size,
 };
 
 use super::controls::{c, control, elevation};
+use super::popover::anchor_reset;
 use super::model::{Model, NO_PATH, Screen, View, load_note_text};
 use crate::store::Store;
 use crate::theme::gpui_adapter::color_tokens;
@@ -54,6 +55,13 @@ pub struct Shell {
     pub(super) month: super::month::MonthView,
     pub(super) week: super::week::WeekView,
     pub(super) year: super::year::YearView,
+    pub(super) pop: Option<super::popover::Form>,
+    pub(super) pop_seq: usize,
+    pub(super) anchors: super::popover::Anchors,
+    /// Deletes and saves, for the toast's Undo.
+    pub(super) undo: gpui_kit::base::UndoHistory<crate::domain::form::Edit>,
+    pub(super) toast: Option<String>,
+    pub(super) toast_gen: u64,
 }
 
 impl Shell {
@@ -80,13 +88,28 @@ impl Shell {
     }
 
     pub fn new(store: Store, path: Option<std::path::PathBuf>, clock: Clock, window: &mut Window, cx: &mut Context<Self>) -> Self {
+        super::popover::bind_keys(cx);
         let dark = is_dark(window.appearance());
         let now = clock();
         let model = Model::new(store, path, now.date(), now.time(), dark);
         let month = super::month::MonthView::new(now.date(), model.week_start(), cx);
         let week = super::week::WeekView::new(cx);
         let year = super::year::YearView::new(cx);
-        let shell = Self { model, clock, pushed: None, pushes: 0, month, week, year };
+        let shell = Self {
+            model,
+            clock,
+            pushed: None,
+            pushes: 0,
+            month,
+            week,
+            year,
+            pop: None,
+            pop_seq: 0,
+            anchors: Default::default(),
+            undo: gpui_kit::base::UndoHistory::new(),
+            toast: None,
+            toast_gen: 0,
+        };
         cx.observe_window_appearance(window, |this, window, cx| {
             this.model.system_dark = is_dark(window.appearance());
             this.sync(cx);
@@ -222,6 +245,8 @@ impl Render for Shell {
                     .into_any_element()
             }
         };
+        let popover = self.popover_layer(&t, window, cx);
+        let toast = self.toast_layer(&t, window, cx);
         div()
             .size_full()
             .flex()
@@ -231,6 +256,14 @@ impl Render for Shell {
             .text_color(c(t.neutral.t1))
             .text_size(px(13.))
             .font_weight(FontWeight::NORMAL)
+            // Esc closes the popover wherever focus is, before any grid or field sees it.
+            .capture_key_down(cx.listener(|this, e: &KeyDownEvent, window, cx| {
+                if e.keystroke.key == "escape" && this.pop.is_some() {
+                    this.close_popover(window, cx);
+                    cx.stop_propagation();
+                }
+            }))
+            .child(anchor_reset(&self.anchors))
             .child(self.sidebar(&t, narrow, window, cx))
             .child(
                 div()
@@ -247,6 +280,8 @@ impl Render for Shell {
                     .children(notice)
                     .child(main),
             )
+            .children(popover)
+            .children(toast)
     }
 }
 

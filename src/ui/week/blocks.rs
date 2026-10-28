@@ -11,6 +11,7 @@ use super::geom::{Bar, Block, EDGE_PX, LANE_H, MORE_X, More, block_name, block_r
 use super::Shell;
 use crate::domain::event::Event;
 use crate::theme::resolve::Theme;
+use crate::ui::popover::anchor_mark;
 use crate::ui::controls::{c, elevation, ring, shape, shape_of};
 
 /// Blocks at least this tall show the time under the title.
@@ -42,6 +43,7 @@ impl Shell {
             .cursor(if lifted { CursorStyle::ClosedHand } else { CursorStyle::OpenHand })
             .when(lifted, |s| s.shadow(elevation(t)))
             .when(focused, |s| s.shadow(ring(c(t.neutral.surface), c(t.ring))))
+            .child(anchor_mark(&self.anchors, format!("ev-{}", e.id)))
             .child(div().absolute().left(px(3.)).top(px(4.)).bottom(px(4.)).w(px(3.)).rounded(px(3.)).bg(c(cal.text)))
             .child(div().absolute().top(px(6.)).right(px(6.)).child(shape(shape_of(e.calendar), c(cal.dot))))
             .child(div().truncate().font_weight(FontWeight::MEDIUM).child(e.title.clone()))
@@ -109,6 +111,7 @@ impl Shell {
             .cursor(if lifted { CursorStyle::ClosedHand } else { CursorStyle::OpenHand })
             .when(lifted, |s| s.shadow(elevation(t)))
             .when(roving == Some(e.id), |s| s.shadow(ring(c(t.neutral.surface), c(t.ring))))
+            .child(anchor_mark(&self.anchors, format!("ev-{}", e.id)))
             .child(shape(shape_of(e.calendar), c(cal.dot)))
             .child(div().flex_1().min_w_0().truncate().child(e.title.clone()));
         Some(div().absolute().top(px(lane_top(b.lane))).h(px(LANE_H - 2.)).left(relative(b.col as f32 / n)).w(relative(b.span as f32 / n)).px(px(2.)).child(pill).into_any_element())

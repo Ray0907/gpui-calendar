@@ -14,6 +14,7 @@ use crate::domain::event::Event;
 use crate::domain::month::{Placed, item_name, layout_week};
 use crate::theme::resolve::Theme;
 use crate::ui::controls::{c, ring, shape, shape_of};
+use crate::ui::popover::anchor_mark;
 use crate::ui::shell::Shell;
 
 impl Shell {
@@ -95,7 +96,7 @@ impl Shell {
             .when(weekend, |s| s.bg(c(n.subtle)))
             .on_mouse_down(MouseButton::Left, cx.listener(move |this, _: &MouseDownEvent, window, cx| this.press_cell(date, window, cx)))
             .on_mouse_move(cx.listener(move |this, _: &MouseMoveEvent, _, cx| this.hover_cell(date, cx)))
-            .on_mouse_up(MouseButton::Left, cx.listener(move |this, _: &MouseUpEvent, _, cx| this.release_cell(date, cx)))
+            .on_mouse_up(MouseButton::Left, cx.listener(move |this, e: &MouseUpEvent, window, cx| this.release_cell(date, e.position, window, cx)))
             .child(div().h(px(22.)).mb(px(4.)).px(px(6.)).flex().items_center().justify_end().text_size(px(12.)).child(label))
             .into_any_element()
     }
@@ -123,7 +124,8 @@ impl Shell {
             .cursor_pointer()
             .active(|s| s.opacity(0.85))
             .when(focused, |s| s.shadow(ring(c(t.neutral.surface), c(t.ring))))
-            .on_mouse_down(MouseButton::Left, cx.listener(move |this, _: &MouseDownEvent, _, _| this.press_event(id)));
+            .on_mouse_down(MouseButton::Left, cx.listener(move |this, _: &MouseDownEvent, _, _| this.press_event(id)))
+            .child(anchor_mark(&self.anchors, format!("ev-{id}")));
         let inner = if p.pill {
             inner
                 .px(px(8.))

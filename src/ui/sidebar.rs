@@ -10,6 +10,7 @@ use gpui_kit::{StatefulInteractiveElement, TestSupportExt, prelude::*};
 
 use super::controls::{banner_scrim, banner_wash, c, control, elevation, eyebrow, icon, on_color, ring_mark, shape, shape_of};
 use super::model::MiniDay;
+use super::popover::{Origin, anchor_mark};
 use super::shell::Shell;
 use crate::store::Calendar;
 use crate::theme::resolve::Theme;
@@ -70,8 +71,11 @@ impl Shell {
             .rounded_full()
             .bg(c(t.ink))
             .child(icon(IconName::Plus, c(t.on_ink), 16.))
-            // Block 8 opens the event form; until then the button only acknowledges the press.
-            .on_click(cx.listener(|_, _: &ClickEvent, _, _| {}))
+            .child(anchor_mark(&self.anchors, "add".into()))
+            .on_click(cx.listener(|this, e: &ClickEvent, window, cx| {
+                let from = if e.is_keyboard() { Origin::Key } else { Origin::Pointer(e.position()) };
+                this.open_new("add", from, window, cx);
+            }))
     }
 
     fn banner(&mut self, t: &Theme, window: &mut Window, cx: &mut Context<Self>) -> Option<impl IntoElement + use<>> {
@@ -101,7 +105,11 @@ impl Shell {
                     .justify_center()
                     .child(icon(IconName::ChevronRight, on_color(), 12.)),
             )
-            .on_click(cx.listener(|_, _: &ClickEvent, _, _| {}));
+            .child(anchor_mark(&self.anchors, "banner".into()))
+            .on_click(cx.listener(|this, e: &ClickEvent, window, cx| {
+                let from = if e.is_keyboard() { Origin::Key } else { Origin::Pointer(e.position()) };
+                this.open_next_up(from, window, cx);
+            }));
         Some(
             div()
                 .id("banner")
@@ -280,7 +288,7 @@ impl Shell {
             .border_color(c(n.line))
             .text_color(c(n.t2))
             .child(div().size(px(22.)).rounded_full().bg(c(n.line)))
-            .child(div().flex_1().child("Alex Chen"))
+            .child(div().flex_1().child("John Doe"))
             .child(account)
     }
 }

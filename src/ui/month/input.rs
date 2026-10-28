@@ -2,11 +2,12 @@
 //! arrow keys through the events.
 
 use chrono::NaiveDate;
-use gpui_kit::{Context, ScrollStrategy, Window};
+use gpui_kit::{Context, Pixels, Point, ScrollStrategy, Window};
 
 use super::{MonthDrag, WEEK_H};
 use crate::domain::drag::{Drag, Pos};
 use crate::domain::month::{enter, neighbor, reading_order};
+use crate::ui::popover::Origin;
 use crate::ui::shell::Shell;
 
 impl Shell {
@@ -38,10 +39,16 @@ impl Shell {
     }
 
     /// Release over a cell: commit what the drag previewed. A click commits nothing.
-    pub(super) fn release_cell(&mut self, date: NaiveDate, cx: &mut Context<Self>) {
+    pub(super) fn release_cell(&mut self, date: NaiveDate, at: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
         self.month.pending = None;
         let Some(mut m) = self.month.drag.take() else { return };
+        // The release cell counts before deciding whether this was a click: no hover may precede it.
         m.drag.update(Pos::Month(date));
+        if let (Some(id), false) = (m.id, m.drag.moved()) {
+            // A press and release on the same chip is a click: open it.
+            self.open_event(id, Origin::Pointer(at), window, cx);
+            return;
+        }
         if let Some(p) = m.drag.end() {
             match m.id {
                 Some(id) => {
@@ -62,8 +69,9 @@ impl Shell {
     }
 
     /// Arrows move the one roving event in reading order; Esc cancels a drag. `true` if it acted.
-    pub(super) fn month_key(&mut self, key: &str, cx: &mut Context<Self>) -> bool {
+    pub(super) fn month_key(&mut self, key: &str, window: &mut Window, cx: &mut Context<Self>) -> bool {
         let forward = match key {
+            "enter" => return self.month.roving.is_some_and(|id| self.model.event(id).is_some() && { self.open_event(id, Origin::Key, window, cx); true }),
             "right" | "down" => true,
             "left" | "up" => false,
             "escape" => {

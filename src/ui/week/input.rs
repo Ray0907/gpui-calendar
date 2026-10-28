@@ -8,6 +8,7 @@ use super::WeekDrag;
 use crate::domain::drag::{Drag, Pos};
 use crate::domain::event::Event;
 use crate::domain::month::{neighbor, reading_order};
+use crate::ui::popover::Origin;
 use crate::ui::shell::Shell;
 
 impl Shell {
@@ -105,11 +106,17 @@ impl Shell {
     }
 
     /// Release: commit what the drag previewed. A click commits nothing.
-    pub(super) fn week_up(&mut self, p: Point<Pixels>, cx: &mut Context<Self>) {
+    pub(super) fn week_up(&mut self, p: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
         self.week.pointer = None;
         let Some(mut w) = self.week.drag.take() else { return };
+        // The release position counts before deciding whether this was a click: no move event may precede it.
         if let Some(pos) = self.week_drag_hit(p, w.reach) {
             w.drag.update(pos);
+        }
+        if let (Some(id), false) = (w.id, w.drag.moved()) {
+            // A press and release on the same block or bar is a click: open it.
+            self.open_event(id, Origin::Pointer(p), window, cx);
+            return;
         }
         if let Some(pre) = w.drag.end() {
             match w.id {
@@ -123,8 +130,9 @@ impl Shell {
     }
 
     /// Arrows move the one roving event in reading order; Esc cancels a drag. `true` if it acted.
-    pub(super) fn week_key(&mut self, key: &str, cx: &mut Context<Self>) -> bool {
+    pub(super) fn week_key(&mut self, key: &str, window: &mut Window, cx: &mut Context<Self>) -> bool {
         let forward = match key {
+            "enter" => return self.week.roving.is_some_and(|id| self.model.event(id).is_some() && { self.open_event(id, Origin::Key, window, cx); true }),
             "right" | "down" => true,
             "left" | "up" => false,
             "escape" => {

@@ -14,19 +14,22 @@ fn main() {
 
     let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/artifacts");
     std::fs::create_dir_all(dir).expect("create artifacts dir");
-    // (file, mode, show the Appearance screen, view, sample events, clock)
-    for (file, mode, appearance, view, sample, (h, m)) in [
-        ("shell-light", Mode::Light, false, View::Month, Sample::Seed, (17, 35)),
-        ("shell-dark", Mode::Dark, false, View::Month, Sample::Seed, (17, 35)),
-        ("appearance-light", Mode::Light, true, View::Month, Sample::Seed, (17, 35)),
-        ("month-light", Mode::Light, false, View::Month, Sample::Month, (17, 35)),
-        ("month-dark", Mode::Dark, false, View::Month, Sample::Month, (17, 35)),
-        ("week-light", Mode::Light, false, View::Week, Sample::Week, (11, 20)),
-        ("week-dark", Mode::Dark, false, View::Week, Sample::Week, (11, 20)),
-        ("day-light", Mode::Light, false, View::Day, Sample::Week, (11, 20)),
-        ("day-dark", Mode::Dark, false, View::Day, Sample::Week, (11, 20)),
-        ("year-light", Mode::Light, false, View::Year, Sample::Year, (17, 35)),
-        ("year-dark", Mode::Dark, false, View::Year, Sample::Year, (17, 35)),
+    // (file, mode, show the Appearance screen, view, sample events, clock, event whose popover is open)
+    for (file, mode, appearance, view, sample, (h, m), popover) in [
+        ("shell-light", Mode::Light, false, View::Month, Sample::Seed, (17, 35), None),
+        ("shell-dark", Mode::Dark, false, View::Month, Sample::Seed, (17, 35), None),
+        ("appearance-light", Mode::Light, true, View::Month, Sample::Seed, (17, 35), None),
+        ("month-light", Mode::Light, false, View::Month, Sample::Month, (17, 35), None),
+        ("month-dark", Mode::Dark, false, View::Month, Sample::Month, (17, 35), None),
+        ("week-light", Mode::Light, false, View::Week, Sample::Week, (11, 20), None),
+        ("week-dark", Mode::Dark, false, View::Week, Sample::Week, (11, 20), None),
+        ("day-light", Mode::Light, false, View::Day, Sample::Week, (11, 20), None),
+        ("day-dark", Mode::Dark, false, View::Day, Sample::Week, (11, 20), None),
+        ("year-light", Mode::Light, false, View::Year, Sample::Year, (17, 35), None),
+        ("year-dark", Mode::Dark, false, View::Year, Sample::Year, (17, 35), None),
+        ("appearance-dark", Mode::Dark, true, View::Month, Sample::Seed, (17, 35), None),
+        ("popover-light", Mode::Light, false, View::Week, Sample::Week, (11, 20), Some(12)),
+        ("popover-dark", Mode::Dark, false, View::Week, Sample::Week, (11, 20), Some(12)),
     ] {
         let mut cx = HeadlessAppContext::with_platform(
             gpui_kit::platform::current_platform(true).text_system(),
@@ -62,6 +65,12 @@ fn main() {
         // The first frame lays the list out and applies the scroll to the month or the grid; the next draw it.
         for _ in 0..4 {
             cx.update_window(handle, |_, w, cx| w.render_frame(cx)).expect("render");
+        }
+        if let Some(id) = popover {
+            cx.update_window(handle, |_, w, cx| shell.update(cx, |s, cx| s.show_event(id, w, cx))).expect("open popover");
+            for _ in 0..3 {
+                cx.update_window(handle, |_, w, cx| w.render_frame(cx)).expect("render");
+            }
         }
         let image = cx.capture_screenshot(handle).expect("offscreen rendering");
         let path = format!("{dir}/{file}.png");

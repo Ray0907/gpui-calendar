@@ -1,6 +1,7 @@
 //! Shell state and the actions on it. No GPUI import: the views call these methods and tests
 //! drive them directly. Every appearance or visibility change is applied to the store and saved.
 
+mod events;
 mod merge;
 mod month;
 mod week;
@@ -51,6 +52,7 @@ pub enum Screen {
 /// The "Next up" banner content.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NextUp {
+    pub id: u64,
     pub title: String,
     pub relative: String,
     pub clock: String,
@@ -507,6 +509,7 @@ impl Model {
             e.start.format("%b %-d").to_string()
         };
         Some(NextUp {
+            id: e.id,
             title: e.title.clone(),
             relative,
             clock: crate::domain::dates::format_time(e.start.time(), self.store.settings.time_format.hour24()),

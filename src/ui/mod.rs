@@ -7,6 +7,7 @@ mod controls;
 mod header;
 pub mod model;
 mod month;
+mod popover;
 mod shell;
 mod sidebar;
 mod week;
