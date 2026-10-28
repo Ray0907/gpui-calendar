@@ -9,7 +9,7 @@ use gpui_kit::{
 
 use super::Form;
 use crate::domain::form::Field;
-use crate::ui::controls::{c, control, field_hover, focus_ring, icon, shape, shape_of};
+use crate::ui::controls::{c, card_hover, control, field_hover, focus_ring, ghost_hover, icon, ink_hover, ink_press, row_press, shape, shape_of};
 use crate::ui::shell::Shell;
 use crate::theme::resolve::Theme;
 
@@ -40,6 +40,7 @@ pub(super) fn text_field(t: &Theme, field: Field, name: &'static str, id: &'stat
         .aria_label(name)
         .h(px(FIELD_H))
         .rounded(px(FIELD_R))
+        .bg(c(t.neutral.field))
         .when(error.is_some(), |i| i.border_2().border_color(c(t.ink)));
     div()
         .id(SharedString::from(format!("{id}-field")))
@@ -86,6 +87,7 @@ impl Shell {
                     .border(px(if on { 2. } else { 1. }))
                     .border_color(if on { c(t.ink) } else { c(t.neutral.border) })
                     .when(on, |s| s.bg(c(t.neutral.subtle)).focus_visible(focus_ring(c(t.neutral.surface), c(t.ring), c(t.neutral.subtle))))
+                    .when(!on, |s| s.hover(card_hover(t)))
                     .child(div().flex().items_center().gap(px(7.)).text_size(px(13.)).font_weight(FontWeight::SEMIBOLD).child(shape(shape_of(id), dot)).child(name.clone()))
                     .child(div().mt(px(2.)).text_size(px(12.)).text_color(c(t.neutral.t3)).child(format!("{n} event{}", if n == 1 { "" } else { "s" })))
                     .when(on, |s| {
@@ -121,6 +123,12 @@ impl Shell {
             .aria_toggled(if on { Toggled::True } else { Toggled::False })
             .h(px(36.))
             .mb(px(8.))
+            // A row: the wash is padded out and the margin takes the padding back, so the box stays where it was.
+            .px(px(8.))
+            .mx(px(-8.))
+            .rounded(px(6.))
+            .hover(ghost_hover(t, t.neutral.surface))
+            .active(row_press(t, t.neutral.surface))
             .flex()
             .items_center()
             .gap(px(10.))
@@ -150,8 +158,8 @@ impl Shell {
             .items_center()
             .rounded(px(FIELD_R))
             .font_weight(FontWeight::SEMIBOLD)
-            .when(primary, |s| s.bg(c(t.ink)).text_color(c(t.on_ink)).focus_visible(focus_ring(c(t.neutral.subtle), c(t.ring), c(t.ink))))
-            .when(!primary, |s| s.bg(c(t.neutral.surface)).border_1().border_color(c(t.neutral.border)).focus_visible(focus_ring(c(t.neutral.subtle), c(t.ring), c(t.neutral.surface))))
+            .when(primary, |s| s.bg(c(t.ink)).text_color(c(t.on_ink)).hover(ink_hover(t)).active(ink_press(t)).focus_visible(focus_ring(c(t.neutral.subtle), c(t.ring), c(t.ink))))
+            .when(!primary, |s| s.bg(c(t.neutral.surface)).hover(ghost_hover(t, t.neutral.surface)).border_1().border_color(c(t.neutral.border)).focus_visible(focus_ring(c(t.neutral.subtle), c(t.ring), c(t.neutral.surface))))
             .child(name)
     }
 }
@@ -180,7 +188,7 @@ pub(super) fn section(t: &Theme, stacked: bool, id: &'static str, title: &'stati
 
 /// The multi-line notes box. The group names it "Notes"; the textarea itself carries no label, so it is said once.
 pub(super) fn notes_field(t: &Theme, form: &Form, calm: bool) -> AnyElement {
-    let area = Textarea::new(&form.inputs.notes).accessibility_id("pop-notes").h(px(NOTES_H)).rounded(px(FIELD_R)).bg(c(t.neutral.surface));
+    let area = Textarea::new(&form.inputs.notes).accessibility_id("pop-notes").h(px(NOTES_H)).rounded(px(FIELD_R)).bg(c(t.neutral.field));
     div().id("pop-notes-field").test_support().role(Role::Group).aria_label("Notes").child(field_hover(t, "pop-notes-box", px(FIELD_R), calm, area)).into_any_element()
 }
 

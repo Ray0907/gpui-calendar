@@ -5,15 +5,14 @@ use std::time::Duration;
 use gpui_kit::{
     Animation, AnimationExt, AnyElement, ClickEvent, Anchor, App, Context, FocusHandle, Focusable, FontWeight, InteractiveElement, IntoElement,
     ParentElement, Role, SharedString, StatefulInteractiveElement, Styled, TestSupportExt, Window, anchored, deferred, div, ease_out_quint, point,
-    px,
+    px, prelude::FluentBuilder,
 };
 
 use super::Form;
 use super::fields::{PAD_X, STACK_BELOW, notes_field, section, status_box, text_field};
 use super::place::{MARGIN, Side, below_header, card_width, side};
 use crate::domain::form::{Field, summary};
-use crate::theme::gpui_adapter::shade;
-use crate::ui::controls::{c, control, elevation};
+use crate::ui::controls::{c, control, elevation, ink_hover, ink_press, scrim};
 use crate::ui::shell::Shell;
 use crate::theme::resolve::Theme;
 
@@ -180,7 +179,7 @@ impl Shell {
             .absolute()
             .inset_0()
             .occlude()
-            .bg(shade(if form.anchor.is_none() { 0.18 } else { 0. }))
+            .when(form.anchor.is_none(), |d| d.bg(scrim(t)))
             .on_click(cx.listener(|this, _: &ClickEvent, window, cx| this.close_popover(window, cx)));
         deferred(div().absolute().inset_0().child(backdrop).child(placed)).with_priority(2).into_any_element()
     }
@@ -194,6 +193,8 @@ impl Shell {
             .flex()
             .items_center()
             .rounded(px(8.))
+            .hover(ink_hover(t))
+            .active(ink_press(t))
             .font_weight(FontWeight::SEMIBOLD)
             .underline()
             .child("Undo")

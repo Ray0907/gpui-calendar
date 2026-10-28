@@ -12,7 +12,7 @@ use super::Shell;
 use crate::domain::event::Event;
 use crate::theme::resolve::Theme;
 use crate::ui::popover::anchor_mark;
-use crate::ui::controls::{c, elevation, ring, shape, shape_of};
+use crate::ui::controls::{c, elevation, ghost_hover, hover_wash, ring, shape, shape_of};
 
 /// Blocks at least this tall show the time under the title.
 const TWO_LINES: f32 = 34.;
@@ -34,6 +34,9 @@ impl Shell {
             .overflow_hidden()
             .rounded(px(6.))
             .bg(c(cal.tint))
+            .hover(hover_wash(t.neutral.t1, cal.tint))
+            // A held block dims to 85% (its ring would show through the dim, so it drops); once it moves it lifts at full opacity.
+            .when(!lifted, |s| s.active(|s| s.opacity(0.85).shadow(vec![])))
             .text_color(c(cal.text))
             .text_size(px(12.))
             .line_height(px(16.))
@@ -76,6 +79,8 @@ impl Shell {
             .overflow_hidden()
             .rounded(px(6.))
             .bg(c(n.surface))
+            .hover(ghost_hover(t, n.surface))
+            .active(|s| s.opacity(0.85))
             .border_1()
             .border_color(c(n.line))
             .text_size(px(12.))
@@ -105,6 +110,8 @@ impl Shell {
             .when(b.from_prev, |s| s.rounded_tl(px(0.)).rounded_bl(px(0.)))
             .when(b.to_next, |s| s.rounded_tr(px(0.)).rounded_br(px(0.)))
             .bg(c(cal.tint))
+            .hover(hover_wash(t.neutral.t1, cal.tint))
+            .when(!lifted, |s| s.active(|s| s.opacity(0.85).shadow(vec![])))
             .text_color(c(cal.text))
             .text_size(px(12.))
             .font_weight(FontWeight::MEDIUM)

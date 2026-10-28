@@ -8,7 +8,7 @@ use gpui_kit::{
 };
 use gpui_kit::{StatefulInteractiveElement, TestSupportExt, prelude::*};
 
-use super::controls::{banner_scrim, banner_wash, c, control, elevation, eyebrow, focus_ring, icon, on_color, ring, ring_mark, shape, shape_of};
+use super::controls::{banner_scrim, banner_scrim_hover, banner_wash, c, control, elevation, eyebrow, focus_ring, ghost_hover, icon, ink_hover, ink_press, ring, ring_mark, row_press, shape, shape_of};
 use super::model::MiniDay;
 use super::popover::{Origin, anchor_mark};
 use super::shell::Shell;
@@ -86,6 +86,8 @@ impl Shell {
             .justify_center()
             .rounded_full()
             .bg(c(t.ink))
+            .hover(ink_hover(t))
+            .active(ink_press(t))
             .focus_visible(focus_ring(c(t.neutral.surface), c(t.ring), c(t.ink)))
             .child(icon(IconName::Plus, c(t.on_ink), 16.))
             .child(anchor_mark(&self.anchors, "add".into()))
@@ -98,7 +100,7 @@ impl Shell {
     fn banner(&mut self, t: &Theme, window: &mut Window, cx: &mut Context<Self>) -> Option<impl IntoElement + use<>> {
         let n = self.model.next_up()?;
         let b = t.banner;
-        let button = control("open-event", Role::Button, n.label(), c(b.from), on_color(), window, cx)
+        let button = control("open-event", Role::Button, n.label(), c(b.from), c(b.value), window, cx)
             .mt(px(10.))
             .h(px(32.))
             .flex()
@@ -109,10 +111,11 @@ impl Shell {
             .w_auto()
             .rounded_full()
             .bg(banner_scrim())
+            .hover(|s| s.bg(banner_scrim_hover()))
             // The scrim is translucent, so the white ring would show through it: focused, fill with the scrim over the gap color.
-            .focus_visible(|s| s.bg(c(b.from).blend(banner_scrim())).shadow(ring(c(b.from), on_color())))
+            .focus_visible(|s| s.bg(c(b.from).blend(banner_scrim())).shadow(ring(c(b.from), c(b.value))))
             .text_size(px(12.))
-            .text_color(on_color())
+            .text_color(c(b.value))
             .child(n.label())
             .child(
                 div()
@@ -122,7 +125,7 @@ impl Shell {
                     .flex()
                     .items_center()
                     .justify_center()
-                    .child(icon(IconName::ChevronRight, on_color(), 12.)),
+                    .child(icon(IconName::ChevronRight, c(b.value), 12.)),
             )
             .child(anchor_mark(&self.anchors, "banner".into()))
             .on_click(cx.listener(|this, e: &ClickEvent, window, cx| {
@@ -178,7 +181,8 @@ impl Shell {
             .gap(px(10.))
             .px(px(8.))
             .rounded(px(6.))
-            .hover(|s| s.bg(c(t.neutral.page)))
+            .hover(ghost_hover(t, t.neutral.surface))
+            .active(row_press(t, t.neutral.surface))
             .aria_toggled(if cal.visible { Toggled::True } else { Toggled::False })
             .child(box_)
             .child(shape(shape_of(id), dot))
@@ -243,6 +247,7 @@ impl Shell {
             .items_center()
             .justify_center()
             .rounded_full()
+            .hover(ghost_hover(t, t.neutral.surface))
             .child(icon(name, c(t.neutral.t2), 16.))
             .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
                 this.model.mini_step(dir);
@@ -266,6 +271,10 @@ impl Shell {
         if d.accent_fill() {
             b = b.aria_description("current date").bg(c(t.accent)).text_color(c(t.accent_on)).font_weight(FontWeight::SEMIBOLD).focus_visible(focus_ring(c(n.surface), c(t.ring), c(t.accent)));
         }
+        // Today keeps its accent fill on hover; every other day washes.
+        if !d.accent_fill() {
+            b = b.hover(ghost_hover(t, n.surface));
+        }
         if d.ring() {
             b = b.shadow(vec![ring_mark(c(t.ink))]); // a shadow, not a border: the cell keeps its size
         }
@@ -287,6 +296,7 @@ impl Shell {
             .items_center()
             .justify_center()
             .rounded(px(6.))
+            .hover(ghost_hover(t, n.surface))
             .aria_toggled(if open { Toggled::True } else { Toggled::False })
             .child(icon(IconName::ChevronsUpDown, c(n.t2), 16.))
             .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {

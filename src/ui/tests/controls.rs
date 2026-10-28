@@ -29,7 +29,34 @@ fn the_system_dark_flag_has_one_definition() {
 
 #[test]
 fn fixed_marks_come_from_the_theme_module() {
-    use crate::theme::gpui_adapter::{on_color, shade};
-    assert_eq!(on_color(), gpui_kit::white());
+    use crate::theme::gpui_adapter::shade;
     assert_eq!(shade(0.5), gpui_kit::black().opacity(0.5));
+}
+
+/// Design-tokens 2: `scrim` is black at 18% in light and 40% in dark; the banner button's scrim goes 28% to 40% on hover.
+#[test]
+fn scrim_and_banner_scrim_follow_the_table() {
+    use crate::store::settings::Appearance;
+    use crate::theme::gpui_adapter::{banner_scrim, banner_scrim_hover, scrim};
+    use crate::theme::resolve::resolve;
+    let a = Appearance::default();
+    assert_eq!(scrim(&resolve(&a, false)), gpui_kit::black().opacity(0.18));
+    assert_eq!(scrim(&resolve(&a, true)), gpui_kit::black().opacity(0.40));
+    assert_eq!((banner_scrim(), banner_scrim_hover()), (gpui_kit::black().opacity(0.28), gpui_kit::black().opacity(0.40)));
+}
+
+/// The ink family (state table): hover is `ink` at 90% over `page`, pressed 80%, in both themes, and neither is the resting ink.
+#[test]
+fn ink_hover_and_press_are_ninety_and_eighty_percent_over_page() {
+    use crate::store::settings::Appearance;
+    use crate::theme::contrast::over;
+    use crate::theme::gpui_adapter::hsla;
+    use crate::theme::resolve::resolve;
+    use crate::ui::controls::{ink_hover_color, ink_press_color};
+    for dark in [false, true] {
+        let t = resolve(&Appearance::default(), dark);
+        let (h, p) = (ink_hover_color(&t), ink_press_color(&t));
+        assert_eq!((h, p), (hsla(over(t.ink, 0.9, t.neutral.page)), hsla(over(t.ink, 0.8, t.neutral.page))));
+        assert!(h != hsla(t.ink) && p != h, "dark={dark}: rest, hover and pressed must differ");
+    }
 }

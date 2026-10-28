@@ -13,6 +13,7 @@ use gpui_kit::{BoxShadow, Hsla, point, px, rgb};
 use super::contrast::{Rgb, wash_hover_rgb};
 use super::palette::SCRIM;
 use super::resolve::Theme;
+use super::token_map::scrim_alpha;
 
 /// `wash-hover` (design-tokens 2): `fg` (t1) at 6% over the control's backdrop.
 pub fn wash_hover(fg: Rgb, backdrop: Rgb) -> Hsla {
@@ -23,8 +24,8 @@ pub fn hsla(c: Rgb) -> Hsla {
     rgb(c.to_u32()).into()
 }
 
-/// Guide fixed marks that do not follow the theme: the check drawn on a colored fill.
-pub fn on_color() -> Hsla {
+/// The white of the banner's chevron chip wash (guide 3, banner). Views read `Banner::value` for the text.
+fn on_color() -> Hsla {
     hsla(Rgb::WHITE)
 }
 
@@ -36,6 +37,16 @@ pub fn shade(alpha: f32) -> Hsla {
 /// Banner button: the dark scrim behind the label and the light wash on its chevron chip.
 pub fn banner_scrim() -> Hsla {
     shade(0.28)
+}
+
+/// The banner button's hover: the same black scrim at 40%.
+pub fn banner_scrim_hover() -> Hsla {
+    shade(0.40)
+}
+
+/// The `scrim` role (design-tokens 2): the modal backdrop, black at 18% in light and 40% in dark.
+pub fn scrim(t: &Theme) -> Hsla {
+    shade(scrim_alpha(t.dark))
 }
 
 pub fn banner_wash() -> Hsla {

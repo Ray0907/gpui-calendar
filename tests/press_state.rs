@@ -9,14 +9,16 @@ fn main() {
     use gpui_calendar::domain::event::Event;
     use gpui_calendar::store::settings::{Mode, Neutral};
     use gpui_calendar::store::WORK;
-    use gpui_calendar::theme::contrast::Rgb;
+    use gpui_calendar::theme::contrast::{Rgb, over};
     use gpui_calendar::ui::model::View;
     use gpui_kit::test::{TestEventExt, TestQueryExt, TestWindowExt};
     use gpui_kit::{Bounds, MouseButton, Pixels, point, px, size};
     use headless::*;
 
     const DOCUMENTED: f32 = 0.85;
+    // The reference is the hovered control, measured per pixel; a dim lands within 0.02 of 0.85.
     const TOL: u8 = 3;
+    const RATIO_TOL: f32 = 0.02;
     const MIN: usize = 20;
     let day = |d| NaiveDate::from_ymd_opt(2026, 10, d).unwrap();
     let events = || {
@@ -34,7 +36,7 @@ fn main() {
     let mut rows = vec![format!("{:<14} {:<22} {:>14} {:>16} {:>14} {:>8}  {}", "mode", "element", "median ratio", "max vs 0.85 pred", "release delta", "samples", "result")];
     let mut failures = Vec::new();
     for mode in [Mode::Light, Mode::Dark] {
-        for name in ["nav-next", "view-week", "month chip (all-day)", "month chip (timed)", "month chip (focused)", "popover Save"] {
+        for name in ["nav-next", "view-week", "month chip (all-day)", "month chip (timed)", "month chip (focused)", "popover Cancel", "popover Save"] {
             let mut win = open(mode, Neutral::Cool, View::Month, events(), (1440., 900.));
             let surface = win.theme.neutral.surface;
             let (b, backdrop) = match name {
@@ -55,9 +57,12 @@ fn main() {
                 _ => {
                     win.cx.update_window(win.h, |_, w, cx| win.shell.update(cx, |s, cx| s.show_event(12, w, cx))).unwrap();
                     win.render();
-                    (win.bounds("pop-save"), None)
+                    (win.bounds(if name == "popover Save" { "pop-save" } else { "pop-cancel" }), None)
                 }
             };
+            let rest_shot = win.shot();
+            // The pointer is on the control when it is pressed, so the unpressed reference is the hovered control.
+            win.act(|w, cx| w.pointer_move(b.center(), None, cx));
             let before = win.shot();
             let backdrop = backdrop.unwrap_or_else(|| before.at(f32::from(b.left()) - 4., f32::from(b.top() + b.size.height * 0.5)));
             let (u, c) = (before.region(b, 2.), b.center());
@@ -77,6 +82,7 @@ fn main() {
             let moved_before = starts(&mut win);
             win.act(|w, cx| w.pointer_up(point(px(2.), px(2.)), MouseButton::Left, cx));
             let after = win.shot().region(b, 2.);
+            let u_rest = rest_shot.region(b, 2.);
             // Per pixel: what 85% of the unpressed pixel over the backdrop would be; and the ratio where the pixel differs from the backdrop.
             let pred = |u: Rgb| {
                 let m = |u: u8, b: u8| (f32::from(u) * DOCUMENTED + f32::from(b) * (1. - DOCUMENTED)).round() as u8;
@@ -86,11 +92,13 @@ fn main() {
             let fill = mode_of(&u);
             let flat = |p: &Rgb| *p == fill || *p == backdrop;
             let max_pred = u.iter().zip(&held).filter(|(u, _)| flat(u)).map(|(&u, &h)| delta(pred(u), h)).max().unwrap();
-            let release = u.iter().zip(&after).map(|(&u, &r)| delta(u, r)).max().unwrap();
+            let release = u_rest.iter().zip(&after).map(|(&u, &r)| delta(u, r)).max().unwrap();
+            // A glyph dims over the control's own (already dimmed) fill, so its ratio is read against that held fill, not the page behind it.
+            let held_fill = mode_of(&held_in);
             let mut ratios: Vec<f32> = u_in
                 .iter()
                 .zip(&held_in)
-                .flat_map(|(u, h)| [(u.0, h.0, backdrop.0), (u.1, h.1, backdrop.1), (u.2, h.2, backdrop.2)])
+                .flat_map(|(u, h)| [(u.0, h.0, held_fill.0), (u.1, h.1, held_fill.1), (u.2, h.2, held_fill.2)])
                 .filter(|&(u, _, bk)| u.abs_diff(bk) >= 40)
                 .map(|(u, h, bk)| (f32::from(h) - f32::from(bk)) / (f32::from(u) - f32::from(bk)))
                 .collect();
@@ -101,7 +109,11 @@ fn main() {
             let focused = name.contains("focused");
             let ring_ok = !focused || (ring_before >= MIN && ring_held * 10 <= ring_before);
             let drag_idle = moved_before == starts(&mut win);
-            let ok = max_pred <= TOL && release <= TOL && ratios.len() >= MIN && median.is_some_and(|m| (m - DOCUMENTED).abs() <= 0.02) && changed && ring_ok && drag_idle;
+            // A filled control presses to the 80% ink fill, not the 85% dim: its fill is the pressed value over `page`, so no ratio.
+            let ink80 = over(win.theme.ink, 0.8, win.theme.neutral.page);
+            let fill_ok = name != "popover Save" || delta(mode_of(&held_shot.region(b, 4.)), ink80) <= TOL;
+            let dim_ok = name == "popover Save" || (max_pred <= TOL && ratios.len() >= MIN && median.is_some_and(|m| (m - DOCUMENTED).abs() <= RATIO_TOL));
+            let ok = dim_ok && fill_ok && release <= TOL && changed && ring_ok && drag_idle;
             if !ok {
                 failures.push(format!("{mode:?} {name}: median {median:?} of {} samples, changed {changed}, ring px {ring_before} -> {ring_held}, max vs pred {max_pred}, release {release}, events untouched {drag_idle}", ratios.len()));
             }
@@ -111,7 +123,7 @@ fn main() {
             }
         }
     }
-    rows.push(format!("documented ratio {DOCUMENTED}; tolerance {TOL}/255 per channel, ratio within 0.02; {} failing", failures.len()));
+    rows.push(format!("documented ratio {DOCUMENTED}; tolerance {TOL}/255 per channel, ratio within {RATIO_TOL}; popover Save: 80% ink fill; {} failing", failures.len()));
     artifact("press.txt", &(rows.join("\n") + "\n"));
     assert!(failures.is_empty(), "press state mismatches:\n{}", failures.join("\n"));
     println!("press state ok: {} rows", rows.len() - 2);

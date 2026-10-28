@@ -59,6 +59,26 @@ name = "field_hover"
 harness = false
 
 [[test]]
+name = "state_header"
+harness = false
+
+[[test]]
+name = "state_sidebar"
+harness = false
+
+[[test]]
+name = "state_cells"
+harness = false
+
+[[test]]
+name = "state_form"
+harness = false
+
+[[test]]
+name = "state_appearance"
+harness = false
+
+[[test]]
 name = "popover_new"
 
 [[test]]

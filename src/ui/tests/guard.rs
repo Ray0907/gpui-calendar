@@ -2,11 +2,11 @@
 //! No file is exempt: fixed marks (white check, black scrims and shadows) live in `theme::gpui_adapter`.
 use std::{fs, path::Path};
 
-const CONSTRUCTORS: [&str; 17] = ["rgb(", "rgba(", "hsl(", "hsla(", "Rgb(", "Rgb::hex(", "white()", "black()", "red()", "green()", "blue()", "yellow()", "transparent_black()", "transparent_white()", "gray(", "grey(", "opaque_"];
+const CONSTRUCTORS: [&str; 19] = ["rgb(", "rgba(", "hsl(", "hsla(", "Rgb(", "Rgb::hex(", "white()", "black()", "red()", "green()", "blue()", "yellow()", "transparent_black()", "transparent_white()", "gray(", "grey(", "opaque_", "shade(", "on_color("];
 
 /// `.opacity(` arguments the doc allows (design-tokens 2 and 3): press 85%, calendar time text 80%, disabled 50%,
-/// swatch disabled 35% (today), and `d`, the fade-in animation delta (not a fill).
-const OPACITIES: [&str; 5] = ["0.85", "0.8", "0.5", "0.35", "d"];
+/// and `d`, the fade-in animation delta (not a fill). The disabled swatch uses the one disabled value, 50%.
+const OPACITIES: [&str; 4] = ["0.85", "0.8", "0.5", "d"];
 
 /// A struct literal of a color type: `Hsla { h: ..` or `Rgba{ r: ..`, not a `-> Hsla {` signature or an `impl .. for Hsla {`.
 fn color_literal(line: &str) -> bool {
@@ -57,10 +57,10 @@ fn violation(line: &str) -> Option<String> {
 
 #[test]
 fn detector_catches_every_literal_form_and_spares_attributes() {
-    for bad in ["bg(\"#fff\")", "x = \"#1a2b3c\"", "\"#1A2B3C80\"", "rgb(0x1)", "rgba(1., 2., 3., 1.)", "hsla(0., 0., 0., 1.)", "hsl(1., 1., 1.)", ".bg(white())", "black().opacity(0.2)", "0xff00ff", "gpui_kit::gray(0.5)", "opaque_grey(0.5, 1.)", "bg(gpui_kit::red())", "transparent_black()", "x.blue()", "Rgb(1, 2, 3)", "Rgb::hex(\"#112233\")", "Rgb::hex(\"112233\")", "Hsla { h: 0., s: 0., l: 0., a: 1. }", "Rgba{ r: 1., g: 1., b: 1., a: 1. }", "c.opacity(0.4)", ".bg(x).opacity(0.9)", "x.opacity(alpha)"] {
+    for bad in ["bg(\"#fff\")", "x = \"#1a2b3c\"", "\"#1A2B3C80\"", "rgb(0x1)", "rgba(1., 2., 3., 1.)", "hsla(0., 0., 0., 1.)", "hsl(1., 1., 1.)", ".bg(white())", "black().opacity(0.2)", "0xff00ff", "gpui_kit::gray(0.5)", "opaque_grey(0.5, 1.)", "bg(gpui_kit::red())", "transparent_black()", "x.blue()", "Rgb(1, 2, 3)", "Rgb::hex(\"#112233\")", "Rgb::hex(\"112233\")", "Hsla { h: 0., s: 0., l: 0., a: 1. }", "Rgba{ r: 1., g: 1., b: 1., a: 1. }", "c.opacity(0.4)", ".bg(x).opacity(0.9)", "x.opacity(alpha)", "s.opacity(0.35)", ".bg(shade(0.18))", "on_color()"] {
         assert!(violation(bad).is_some(), "should flag {bad}");
     }
-    for ok in ["#[derive(Debug)]", "#![allow(x)]", "c(accent(ac).rgb)", "Rgb::new()", "// issue #12", "r#\"raw\"#", "use crate::theme::gpui_adapter::hsla;", "\"Tint of the grays\"", "let tired = 1;", "anchored().anchor(c)", "x.fired()", "to_rgb(1)", "fn c() -> Hsla {", "impl From<X> for Rgba {", "s.opacity(0.85)", "d.opacity(0.8)", "el.opacity(d)", "use gpui_kit::Rgb;"] {
+    for ok in ["#[derive(Debug)]", "#![allow(x)]", "c(accent(ac).rgb)", "Rgb::new()", "// issue #12", "r#\"raw\"#", "use crate::theme::gpui_adapter::hsla;", "\"Tint of the grays\"", "let tired = 1;", "anchored().anchor(c)", "x.fired()", "to_rgb(1)", "fn c() -> Hsla {", "impl From<X> for Rgba {", "s.opacity(0.85)", "d.opacity(0.8)", "el.opacity(d)", "use gpui_kit::Rgb;", "banner_shade(1)", "x.nonon_color()"] {
         assert!(violation(ok).is_none(), "should allow {ok}");
     }
 }

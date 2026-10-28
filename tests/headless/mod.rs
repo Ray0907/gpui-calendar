@@ -1,5 +1,6 @@
 //! Shared helpers of the harness-less pixel tests: a headless shell, screenshots, sampling, artifact files.
 #![allow(dead_code)]
+pub mod states;
 use std::sync::Arc;
 
 use chrono::NaiveDate;

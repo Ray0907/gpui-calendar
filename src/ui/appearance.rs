@@ -6,12 +6,12 @@ use gpui_kit::{
     StatefulInteractiveElement, Styled, TestSupportExt, Toggled, Window, div, point, px, prelude::*,
 };
 
-use super::controls::{c, control, control_disabled, focus_ring, icon, on_color, shape, shape_of};
+use super::controls::{c, card_hover, control, control_disabled, focus_ring, ghost_hover, icon, ink_hover, ink_press, shape, shape_of};
 use super::shell::Shell;
 use crate::store::CALENDAR_NAMES;
 use crate::store::settings::{Accent, CalendarColor, Mode, Neutral};
 use crate::theme::palette::{ACCENTS, NEUTRALS, SLOTS, accent, neutral, slot};
-use crate::theme::resolve::Theme;
+use crate::theme::resolve::{Theme, check_color};
 
 /// The status line's name is its text, or "Status" while it is empty.
 fn status_name(hint: &str) -> String {
@@ -47,6 +47,8 @@ struct Swatch {
     id: String,
     label: String,
     color: Hsla,
+    /// The mark on `color` when selected: `accent_on` for an accent, `check_color` for a calendar color.
+    check: Hsla,
     selected: bool,
     unavailable: Option<String>,
 }
@@ -63,7 +65,7 @@ impl Shell {
             .items_center()
             .justify_center()
             .when(s.selected, |d| d.shadow(vec![spread(c(n.surface), 2.), spread(c(t.ink), 4.)]))
-            .children(s.selected.then(|| icon(IconName::Check, if t.dark { c(n.page) } else { on_color() }, 14.)));
+            .children(s.selected.then(|| icon(IconName::Check, s.check, 14.)));
         let unavailable = s.unavailable.is_some();
         control_disabled(s.id, Role::Button, s.label, unavailable, c(n.surface), c(t.ring), window, cx)
             .size(px(36.))
@@ -71,7 +73,9 @@ impl Shell {
             .items_center()
             .justify_center()
             .rounded_full()
-            .when(unavailable, |d| d.opacity(0.35))
+            // Disabled is 50% with no hover (state table); the swatch stays a focus target.
+            .when(unavailable, |d| d.opacity(0.5))
+            .when(!unavailable, |d| d.hover(ghost_hover(t, n.surface)))
             .aria_toggled(if s.selected { Toggled::True } else { Toggled::False })
             .child(dot)
             .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
@@ -94,7 +98,8 @@ impl Shell {
             .border_color(if on { c(t.ink) } else { c(n.border) })
             .text_size(px(12.))
             .font_weight(FontWeight::SEMIBOLD)
-            .when(on, |d| d.bg(c(t.ink)).text_color(c(t.on_ink)).focus_visible(focus_ring(c(n.surface), c(t.ring), c(t.ink))))
+            .when(on, |d| d.bg(c(t.ink)).text_color(c(t.on_ink)).hover(ink_hover(t)).active(ink_press(t)).focus_visible(focus_ring(c(n.surface), c(t.ring), c(t.ink))))
+            .when(!on, |d| d.hover(ghost_hover(t, n.surface)))
             .aria_toggled(if on { Toggled::True } else { Toggled::False })
             .child(label)
             .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
@@ -119,6 +124,7 @@ impl Shell {
             .border(px(if on { 2. } else { 1. }))
             .border_color(if on { c(t.ink) } else { c(n.border) })
             .when(on, |d| d.bg(c(n.subtle)))
+            .when(!on, |d| d.hover(card_hover(t)))
             .font_weight(FontWeight::MEDIUM)
             .aria_toggled(if on { Toggled::True } else { Toggled::False })
             .child(div().id(format!("neutral-swatch-{nt:?}")).test_support().flex().pl(px(3.)).children(chips))
@@ -144,6 +150,7 @@ impl Shell {
                     id: format!("accent-{ac:?}"),
                     label: self.model.accent_name(ac),
                     color: c(accent(ac).rgb),
+                    check: c(t.accent_on),
                     selected: a.accent == ac,
                     unavailable: self.model.accent_reason(ac),
                 };
@@ -158,6 +165,10 @@ impl Shell {
         let reset = control("reset-appearance", Role::Button, "Reset to defaults", c(n.surface), c(t.ring), window, cx)
             .mt(px(6.))
             .py(px(4.))
+            .px(px(6.))
+            .ml(px(-6.))
+            .rounded(px(6.))
+            .hover(ghost_hover(t, n.surface))
             .w_auto()
             .text_color(c(n.t2))
             .underline()
@@ -216,6 +227,7 @@ impl Shell {
                     id: format!("calendar-color-{id}-{col:?}"),
                     label: format!("{name}: {}", self.model.calendar_color_name(id, col)),
                     color: c(slot(col).scheme(t.dark).dot),
+                    check: c(check_color(slot(col).scheme(t.dark).dot, &t.neutral)),
                     selected: current == Some(col),
                     unavailable: self.model.calendar_color_reason(id, col),
                 };

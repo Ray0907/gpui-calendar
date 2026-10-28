@@ -9,7 +9,7 @@ use gpui_kit::{
     Window, WindowAppearance, WindowOptions, div, px, size,
 };
 
-use super::controls::{c, control, elevation};
+use super::controls::{c, control, elevation, ink_hover, ink_press};
 use super::popover::{Origin, anchor_mark, anchor_reset};
 use super::model::{Command, Model, NO_PATH, Screen, View, command, load_note_text};
 use crate::store::Store;
@@ -189,6 +189,8 @@ impl Shell {
                 .items_center()
                 .flex_none()
                 .rounded(px(8.))
+                .hover(ink_hover(t))
+                .active(ink_press(t))
                 .border_1()
                 .border_color(c(t.on_ink))
                 .font_weight(FontWeight::SEMIBOLD)

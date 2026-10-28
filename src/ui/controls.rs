@@ -9,7 +9,9 @@ use gpui_kit::{
 };
 
 use super::a11y::Disabled;
-pub use crate::theme::gpui_adapter::{banner_scrim, banner_wash, elevation, hsla as c, on_color, wash_hover};
+use crate::theme::contrast::{Rgb, over, wash_press_rgb};
+use crate::theme::resolve::Theme;
+pub use crate::theme::gpui_adapter::{banner_scrim, banner_scrim_hover, banner_wash, elevation, hsla as c, scrim, wash_hover};
 
 /// Guide 3 "Focus ring": 2px ring, 2px gap, drawn as two spread shadows so it follows the radius.
 const RING_PX: f32 = 2.;
@@ -37,6 +39,50 @@ pub(super) fn field_hover(t: &crate::theme::resolve::Theme, id: impl Into<Shared
     let id = id.into();
     let outline = div().absolute().inset_0().rounded(radius).border_1().border_color(c(t.neutral.t2)).invisible().group_hover(id.clone(), |s| s.visible());
     div().id(id.clone()).test_support().group(id).relative().child(field).when(live, |d| d.child(outline))
+}
+
+/// Hover of a neutral control (state table, ghost and chip): `wash-hover`, `fg` at 6% over the fill `backdrop` it sits on. Pressed keeps
+/// `control`'s 85% dim. Never `ink`, `t1` or white as a fill.
+pub(super) fn hover_wash(fg: Rgb, backdrop: Rgb) -> impl FnOnce(StyleRefinement) -> StyleRefinement + use<> {
+    let wash = wash_hover(fg, backdrop);
+    move |s| s.bg(wash)
+}
+
+/// `hover_wash` in the text color: the ghost button, day cell, segment and chip hover.
+pub(super) fn ghost_hover(t: &Theme, backdrop: Rgb) -> impl FnOnce(StyleRefinement) -> StyleRefinement + use<> {
+    hover_wash(t.neutral.t1, backdrop)
+}
+
+/// Pressed fill of a list row (`wash-press`, `t1` at 10%): a fill, not a dim, so it replaces `control`'s 85%.
+pub(super) fn row_press(t: &Theme, backdrop: Rgb) -> impl FnOnce(StyleRefinement) -> StyleRefinement + use<> {
+    let wash = c(wash_press_rgb(t.neutral.t1, backdrop));
+    move |s| s.bg(wash)
+}
+
+/// Filled ink controls (add, Save, selected pill): hover is `ink` at 90% over `page`, pressed 80% (design-states 3). In dark that dims the near-white fill.
+pub(super) fn ink_hover_color(t: &Theme) -> Hsla {
+    c(over(t.ink, 0.9, t.neutral.page))
+}
+
+pub(super) fn ink_press_color(t: &Theme) -> Hsla {
+    c(over(t.ink, 0.8, t.neutral.page))
+}
+
+pub(super) fn ink_hover(t: &Theme) -> impl FnOnce(StyleRefinement) -> StyleRefinement + use<> {
+    let fill = ink_hover_color(t);
+    move |s| s.bg(fill)
+}
+
+/// Replaces `control`'s 85% dim with the 80% fill, which is the table's pressed value for a filled control.
+pub(super) fn ink_press(t: &Theme) -> impl FnOnce(StyleRefinement) -> StyleRefinement + use<> {
+    let fill = ink_press_color(t);
+    move |s| s.bg(fill)
+}
+
+/// A radio card (calendar card, neutral tint): the outline goes from `border` to `t2` on hover.
+pub(super) fn card_hover(t: &Theme) -> impl FnOnce(StyleRefinement) -> StyleRefinement + use<> {
+    let outline = c(t.neutral.t2);
+    move |s| s.border_color(outline)
 }
 
 /// A focusable, nameable, pressable element. `gap` is the color behind it (for the ring's gap);
@@ -73,7 +119,8 @@ pub fn control_disabled<I: Into<ElementId>, L: Into<gpui_kit::SharedString>>(
         .role(role)
         .aria_label(label)
         .cursor_pointer()
-        .active(|s| s.opacity(0.85))
+        // Disabled takes no press: `.active` would also replace the disabled 50% the caller sets.
+        .when(!disabled, |d| d.active(|s| s.opacity(0.85)))
         .focus_visible(focus_ring(gap, ring_color, gap))
 }
 

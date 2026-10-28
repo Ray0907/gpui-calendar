@@ -6,7 +6,7 @@ use gpui_kit::{
     Toggled, Window, div, px, prelude::*,
 };
 
-use super::controls::{c, control, elevation, focus_ring, icon};
+use super::controls::{c, control, elevation, focus_ring, ghost_hover, icon};
 use super::model::{Command, View};
 use super::shell::Shell;
 use crate::theme::resolve::Theme;
@@ -33,6 +33,7 @@ impl Shell {
                     .text_color(if on { c(n.t1) } else { c(n.t2) })
                     .font_weight(if on { FontWeight::SEMIBOLD } else { FontWeight::NORMAL })
                     .when(on, |s| s.bg(c(n.page)).focus_visible(focus_ring(c(n.field), c(t.ring), c(n.page))))
+                    .when(!on, |s| s.hover(ghost_hover(t, n.field)))
                     .aria_toggled(if on { Toggled::True } else { Toggled::False })
                     .child(v.name())
                     .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
@@ -51,6 +52,7 @@ impl Shell {
                 .justify_center()
                 .rounded_full()
                 .bg(c(n.page))
+                .hover(ghost_hover(t, n.page))
                 .focus_visible(focus_ring(c(n.surface), c(t.ring), c(n.page)))
                 .child(icon(ic, c(n.t1), 16.))
                 .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
@@ -66,6 +68,7 @@ impl Shell {
             .items_center()
             .rounded_full()
             .bg(c(n.page))
+            .hover(ghost_hover(t, n.page))
             .focus_visible(focus_ring(c(n.surface), c(t.ring), c(n.page)))
             .text_size(px(12.))
             .font_weight(FontWeight::MEDIUM)

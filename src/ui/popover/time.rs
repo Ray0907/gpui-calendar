@@ -1,7 +1,7 @@
 //! The start and end times of the popover: picked in segments with the arrow keys from gpui-kit's time field, never typed as text.
 
 use chrono::NaiveTime;
-use gpui_kit::component::{ActiveTheme, Disableable};
+use gpui_kit::component::Disableable;
 use gpui_kit::component::time_field::{HourCycle, TimeField, TimeFieldEvent, TimeFieldState};
 use gpui_kit::{
     AnyElement, App, AppContext, Context, Entity, FocusHandle, Focusable, InteractiveElement, IntoElement, KeyDownEvent, ParentElement, Role, SharedString, Styled, Subscription,
@@ -105,6 +105,11 @@ impl Times {
     }
 }
 
+/// A disabled time field still takes a press (the library selects a segment); a transparent cover over it eats the mouse.
+fn disabled_cover(off: bool, field: impl IntoElement) -> impl IntoElement {
+    div().relative().w_full().child(field).when(off, |d| d.child(div().absolute().inset_0().occlude()))
+}
+
 impl Shell {
     /// A labelled time field, 48px like the others; disabled (greyed, not in the tab order) while the event is all day. An error
     /// sits under it like a text field's.
@@ -118,8 +123,8 @@ impl Shell {
             .disabled(off)
             // A time the draft held but nobody can read sits at 00:00: invalid until one is picked.
             .invalid(form.times.is_unread(f))
-            // `disabled` keeps the fill (state table): the library would swap it for a tinted one.
-            .when(off, |i| i.bg(cx.theme().input_background()))
+            // The `field` fill, disabled or not (state table): the library would paint the page color, and swap it for a tinted one when disabled.
+            .bg(c(t.neutral.field))
             .when(error.is_some(), |i| i.border_2().border_color(c(t.ink)));
         Disabled::new(div().id(SharedString::from(format!("{id}-field"))), off)
             .test_support()
@@ -137,7 +142,7 @@ impl Shell {
                 }
             }))
             .child(label(t, name))
-            .child(field_hover(t, format!("{id}-box"), px(FIELD_R), calm && !off && error.is_none(), field))
+            .child(field_hover(t, format!("{id}-box"), px(FIELD_R), calm && !off && error.is_none(), disabled_cover(off, field)))
             .when_some(error, |d, e| d.child(error_note(t, id, e)))
             .into_any_element()
     }

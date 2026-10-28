@@ -137,7 +137,7 @@ impl Shell {
                     .right_0()
                     .flex()
                     .justify_center()
-                    .child(div().px(px(12.)).py(px(6.)).rounded_full().bg(c(t.neutral.t1)).text_color(c(t.neutral.surface)).text_size(px(12.)).font_weight(FontWeight::MEDIUM).child(format!("Focus: {h}")))
+                    .child(div().px(px(12.)).py(px(6.)).rounded_full().bg(c(t.ink)).text_color(c(t.on_ink)).text_size(px(12.)).font_weight(FontWeight::MEDIUM).child(format!("Focus: {h}")))
             }))
             .child(
                 div()
