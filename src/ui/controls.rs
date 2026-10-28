@@ -59,6 +59,9 @@ pub fn control_disabled<I: Into<ElementId>, L: Into<gpui_kit::SharedString>>(
         .role(role)
         .aria_label(label)
         .cursor_pointer()
+        // The ring's shadow shows through a box with no fill: the gap color is what is behind it, so filling with it
+        // is invisible, and a caller's own `bg` (set after) takes over.
+        .bg(gap)
         .active(|s| s.opacity(0.85))
         .focus_visible(move |s| s.shadow(ring(gap, ring_color)))
 }

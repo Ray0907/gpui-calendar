@@ -46,7 +46,7 @@ impl Shell {
                     let top = ITEMS_TOP + self.month.cap as f32 * ITEM_H;
                     let text = format!("+{} more", lay.more[col]);
                     let on = ringed == Some(col);
-                    self.lane_box(top, col, 1).id(("month-more", ix * 7 + col)).test_support().role(Role::Button).aria_label(text.clone()).aria_selected(on).px(px(10.)).text_size(px(12.)).text_color(c(t.neutral.t2)).rounded(px(6.)).when(on, |s| s.shadow(ring(c(t.neutral.surface), c(t.ring)))).child(text).into_any_element()
+                    self.lane_box(top, col, 1).id(("month-more", ix * 7 + col)).test_support().role(Role::Button).aria_label(text.clone()).aria_selected(on).px(px(10.)).text_size(px(12.)).text_color(c(t.neutral.t2)).rounded(px(6.)).when(on, |s| s.bg(c(t.neutral.surface)).shadow(ring(c(t.neutral.surface), c(t.ring)))).child(text).into_any_element()
                 }).collect();
                 div()
                     .id(("month-week", ix))
@@ -71,7 +71,8 @@ impl Shell {
         let n = &t.neutral;
         let weekend = matches!(date.weekday(), Weekday::Sat | Weekday::Sun);
         let num = date.format("%-d").to_string();
-        let number = div().min_w(px(22.)).h(px(22.)).flex().items_center().justify_center().rounded_full().child(num);
+        // The ring's shadow shows through a box with no fill, so the cursor's number gets the gap color (today's accent wins below).
+        let number = div().min_w(px(22.)).h(px(22.)).flex().items_center().justify_center().rounded_full().when(cursor, |s| s.bg(c(n.surface))).child(num);
         let label = if date == self.model.today {
             number.bg(c(t.accent)).text_color(c(t.accent_on)).font_weight(FontWeight::SEMIBOLD)
         } else if date.month() != shown {
@@ -123,7 +124,7 @@ impl Shell {
             .font_weight(FontWeight::MEDIUM)
             .cursor_pointer()
             .active(|s| s.opacity(0.85))
-            .when(focused, |s| s.shadow(ring(c(t.neutral.surface), c(t.ring))))
+            .when(focused, |s| s.bg(c(t.neutral.surface)).shadow(ring(c(t.neutral.surface), c(t.ring))))
             .on_mouse_down(MouseButton::Left, cx.listener(move |this, _: &MouseDownEvent, _, _| this.press_event(id)))
             .child(anchor_mark(&self.anchors, format!("ev-{id}")));
         let inner = if p.pill {

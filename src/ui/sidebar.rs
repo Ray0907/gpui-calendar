@@ -8,7 +8,7 @@ use gpui_kit::{
 };
 use gpui_kit::{StatefulInteractiveElement, TestSupportExt, prelude::*};
 
-use super::controls::{banner_scrim, banner_wash, c, control, elevation, eyebrow, icon, on_color, ring_mark, shape, shape_of};
+use super::controls::{banner_scrim, banner_wash, c, control, elevation, eyebrow, icon, on_color, ring, ring_mark, shape, shape_of};
 use super::model::MiniDay;
 use super::popover::{Origin, anchor_mark};
 use super::shell::Shell;
@@ -93,6 +93,8 @@ impl Shell {
             .w_auto()
             .rounded_full()
             .bg(banner_scrim())
+            // The scrim is translucent, so the white ring would show through it: focused, fill with the scrim over the gap color.
+            .focus_visible(|s| s.bg(c(b.from).blend(banner_scrim())).shadow(ring(c(b.from), on_color())))
             .text_size(px(12.))
             .text_color(on_color())
             .child(n.label())

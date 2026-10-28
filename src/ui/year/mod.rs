@@ -187,8 +187,8 @@ impl Shell {
             .font_weight(FontWeight::SEMIBOLD)
             .cursor_pointer()
             .active(|s| s.opacity(0.85))
-            .child(first.format("%B").to_string())
             .when(cursor == Some(Cursor::Title(year, month)), |s| s.child(self.year_ring(t, format!("year-ring-month-{year}-{month:02}"))))
+            .child(first.format("%B").to_string())
             .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
                 this.model.drill_month(year, month);
                 this.sync(cx);
@@ -212,9 +212,10 @@ impl Shell {
     }
 
     /// The focus ring of the roving stop: an element of its own over the whole day or title, so it never
-    /// reads as the today circle, and a headless test can tell where it is.
+    /// reads as the today circle, and a headless test can tell where it is. It paints first, so the surface
+    /// fill that keeps the ring's shadow out of the interior sits under the content.
     fn year_ring(&self, t: &Theme, id: String) -> AnyElement {
-        div().id(SharedString::from(id)).test_support().absolute().inset_0().rounded(px(6.)).shadow(ring(c(t.neutral.surface), c(t.ring))).into_any_element()
+        div().id(SharedString::from(id)).test_support().absolute().inset_0().rounded(px(6.)).bg(c(t.neutral.surface)).shadow(ring(c(t.neutral.surface), c(t.ring))).into_any_element()
     }
 
     fn year_day(&self, t: &Theme, date: NaiveDate, cache: &Cache, cursor: bool, day_h: f32, cx: &Context<Self>) -> AnyElement {
@@ -267,9 +268,9 @@ impl Shell {
             .cursor_pointer()
             .active(|s| s.opacity(0.85))
             .when(is_weekend(date), |s| s.bg(c(n.subtle)))
+            .when(cursor, |s| s.child(self.year_ring(t, format!("year-ring-{date}"))))
             .child(num)
             .child(dots)
-            .when(cursor, |s| s.child(self.year_ring(t, format!("year-ring-{date}"))))
             .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
                 this.model.drill_day(date);
                 this.sync(cx);

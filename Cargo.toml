@@ -16,3 +16,7 @@ gpui-kit = { version = "0.8.1", features = ["test-support"] }
 [[test]]
 name = "screenshot"
 harness = false
+
+[[test]]
+name = "focus_fill"
+harness = false
