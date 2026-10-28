@@ -2,8 +2,9 @@
 mod common;
 
 use common::year::*;
-use gpui_calendar::domain::year::Cursor;
-use gpui_calendar::store::{PERSONAL, WORK};
+use gpui_calendar::domain::year::{Cursor, DATE_BOX, MAX_COLS, MORE_H};
+use gpui_calendar::domain::event::Event;
+use gpui_calendar::store::{PERSONAL, SIDE, WORK};
 use gpui_calendar::ui::model::View;
 use gpui_kit::test::{TestEventExt, TestWindowExt};
 use gpui_kit::{AppContext, TestAppContext, point, px};
@@ -28,7 +29,7 @@ fn oct_on_screen(cx: &mut TestAppContext, h: gpui_kit::AnyWindowHandle) -> bool 
 
 #[gpui_kit::test]
 fn today_and_view_changes_scroll_back_to_the_anchor_even_when_it_did_not_move(cx: &mut TestAppContext) {
-    let (h, shell) = open_year(cx, "yearm-scroll", 1440.);
+    let (h, shell) = open_year_with(cx, "yearm-scroll", (960., 600.), evs());
     assert!(oct_on_screen(cx, h));
     // The wheel moves the grid without a roving day, and the anchor stays on Oct 28.
     wheel(cx, h, 4000.);
@@ -167,4 +168,137 @@ fn modified_arrows_and_enter_are_left_alone_in_the_grid(cx: &mut TestAppContext)
     });
     cx.update_window(h, |_, w, cx| w.press("right", cx)).unwrap();
     cx.update(|cx| assert_eq!(shell.read(cx).model.year_cursor, Some(Cursor::Day(d(2026, 10, 29))), "the plain arrow still does"));
+}
+
+#[gpui_kit::test]
+fn all_twelve_months_show_four_across_at_1440_without_scrolling(cx: &mut TestAppContext) {
+    let (h, _) = open_year(cx, "year-four", 1440.);
+    cx.update_window(h, |_, w, _| {
+        let view = w.find("year-scroll").bounds();
+        let months: Vec<_> = (1..=12).map(|m| w.find(format!("year-month-2026-{m:02}")).bounds()).collect();
+        for (i, b) in months.iter().enumerate() {
+            assert!(b.top() >= view.top() && b.bottom() <= view.bottom() && b.right() <= view.right(), "month {} lies inside the viewport: {b:?} in {view:?}", i + 1);
+            assert_eq!(b.top(), months[i / MAX_COLS * MAX_COLS].top(), "month {} shares its row", i + 1);
+            if i % MAX_COLS > 0 {
+                assert!(b.left() > months[i - 1].left(), "month {} is right of the one before", i + 1);
+            }
+        }
+        assert!(months[4].top() > months[0].top() && months[8].top() > months[4].top(), "three rows");
+        let last_day = w.find("year-day-2026-12-31").bounds();
+        assert!(last_day.bottom() <= view.bottom(), "the grid needs no scrolling: {last_day:?} in {view:?}");
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn the_column_count_drops_with_the_width_and_nothing_overflows_sideways(cx: &mut TestAppContext) {
+    for (w_px, cols) in [(1440., 4), (960., 3), (700., 2), (520., 1)] {
+        let (h, _) = open_year(cx, &format!("year-cols-{w_px}"), w_px);
+        cx.update_window(h, |_, w, _| {
+            let view = w.find("year-scroll").bounds();
+            let tops: Vec<_> = (1..=12).map(|m| w.find(format!("year-month-2026-{m:02}")).bounds()).collect();
+            assert_eq!(tops.iter().take_while(|b| b.top() == tops[0].top()).count(), cols, "{w_px}px: months per row");
+            assert!(tops.iter().all(|b| b.left() >= view.left() && b.right() <= view.right()), "{w_px}px: no horizontal overflow");
+        })
+        .unwrap();
+    }
+}
+
+#[gpui_kit::test]
+fn dots_are_five_px_right_under_the_day_number(cx: &mut TestAppContext) {
+    let (h, _) = open_year(cx, "year-dot-size", 1440.);
+    cx.update_window(h, |_, w, _| {
+        let num = w.find("year-num-2026-10-14").bounds();
+        for cal in [WORK, PERSONAL, SIDE] {
+            let dot = w.find(format!("year-dot-2026-10-14-{cal}")).bounds();
+            assert_eq!((dot.size.width, dot.size.height), (gpui_kit::px(5.), gpui_kit::px(5.)), "dot {cal} is 5px");
+            assert!(dot.top() >= num.bottom() && dot.top() - num.bottom() <= gpui_kit::px(1.), "dot {cal} sits directly under the number: {dot:?} vs {num:?}");
+        }
+    })
+    .unwrap();
+}
+
+/// Calendars 0..n on October 14, so the day shows three dots and a "+n" marker for the rest.
+fn crowded(n: u8) -> Vec<gpui_calendar::domain::event::Event> {
+    (0..n).map(|c| timed(c as u64 + 1, "E", c, 14, 9)).collect()
+}
+
+/// Asserts the "+n" label lies in its own line box under the date box and inside its day cell.
+fn assert_more_fits(w: &mut gpui_kit::Window, hidden_label: &str) {
+    let (cell, num, more) = (w.find("year-day-2026-10-14").bounds(), w.find("year-num-2026-10-14").bounds(), w.find("year-more-2026-10-14").bounds());
+    assert!(more.top() >= num.bottom(), "the label starts under the date box: {more:?} vs {num:?}");
+    assert!(more.bottom() <= cell.bottom() && more.left() >= cell.left() && more.right() <= cell.right(), "the label stays in its day ({hidden_label}): {more:?} in {cell:?}");
+    assert!(more.size.height >= px(MORE_H), "own line box: {more:?}");
+    let dots = w.find("year-dot-2026-10-14-0").bounds();
+    assert!(dots.left() >= cell.left(), "dots stay in the day: {dots:?} in {cell:?}");
+}
+
+#[gpui_kit::test]
+fn the_plus_marker_has_its_own_line_box_inside_the_day_at_the_height_floor(cx: &mut TestAppContext) {
+    let (h, _) = open_year_with(cx, "yearm-more-box", (1440., 769.), crowded(14));
+    cx.update_window(h, |_, w, _| {
+        assert_more_fits(w, "+2");
+        let (cell, num) = (w.find("year-day-2026-10-14").bounds(), w.find("year-num-2026-10-14").bounds());
+        assert!(cell.size.height >= px(DATE_BOX + MORE_H), "a day with a marker is tall enough: {cell:?} {num:?}");
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn a_huge_marker_is_capped_and_does_not_spill_into_the_next_day_at_the_month_minimum(cx: &mut TestAppContext) {
+    // 1244px is the narrowest window with four 220px months, so a day is about 31px wide.
+    let (h, _) = open_year_with(cx, "yearm-more-wide", (1244., 700.), crowded(14));
+    cx.update_window(h, |_, w, _| {
+        assert_more_fits(w, "9+");
+        let (cell, next) = (w.find("year-day-2026-10-14").bounds(), w.find("year-day-2026-10-15").bounds());
+        let more = w.find("year-more-2026-10-14").bounds();
+        assert!(more.right() <= next.left() && cell.right() <= next.left() + px(0.5), "the marker ends before the next day: {more:?} {next:?}");
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn four_columns_that_still_scroll_open_on_the_anchor_month(cx: &mut TestAppContext) {
+    let (h, _) = open_year_with(cx, "yearm-four-scroll", (1440., 480.), evs());
+    cx.update_window(h, |_, w, _| {
+        let (view, jan) = (w.find("year-scroll").bounds(), w.find("year-month-2026-01").bounds());
+        assert!(jan.top() < view.top(), "1440x480 needs scrolling with four columns, and the grid is scrolled down to October: {jan:?} in {view:?}");
+    })
+    .unwrap();
+    assert!(oct_on_screen(cx, h), "October, in the third row of four columns, is scrolled to");
+}
+
+#[gpui_kit::test]
+fn a_resize_that_changes_the_column_count_scrolls_back_to_the_anchor(cx: &mut TestAppContext) {
+    let (h, _) = open_year_with(cx, "yearm-resize", (1440., 480.), evs());
+    wheel(cx, h, 4000.);
+    assert!(!oct_on_screen(cx, h), "the wheel took October away");
+    cx.simulate_window_resize(h, gpui_kit::size(px(960.), px(600.)));
+    assert!(oct_on_screen(cx, h), "three columns now, and October is back on screen");
+}
+
+#[gpui_kit::test]
+fn a_crowded_day_does_not_make_the_grid_taller_than_the_window(cx: &mut TestAppContext) {
+    // Every month of the October row has a marker, so whichever month is tallest grows.
+    let at = |m: u32| d(2026, m, 11).and_hms_opt(9, 0, 0).unwrap();
+    let evs = (9..=12).flat_map(|m| (0..14).map(move |c| Event::timed(m as u64 * 100 + c as u64, "N", c, at(m), at(m) + chrono::Duration::hours(1)))).collect();
+    let (h, _) = open_year_with(cx, "yearm-more-fit", (1440., 810.), evs);
+    cx.update_window(h, |_, w, _| {
+        let (view, first, last) = (w.find("year-scroll").bounds(), w.find("year-month-2026-01").bounds(), w.find("year-day-2026-12-31").bounds());
+        assert!(first.top() >= view.top() && last.bottom() <= view.bottom(), "fits without scrolling with a marker: {first:?}..{last:?} in {view:?}");
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn dots_sit_at_the_same_height_on_days_with_and_without_a_marker(cx: &mut TestAppContext) {
+    // Oct 14 has a marker; Oct 15 (same week) has three plain dots.
+    let mut evs = crowded(5);
+    evs.extend((0..3).map(|c| timed(100 + c as u64, "F", c, 15, 9)));
+    let (h, _) = open_year_with(cx, "yearm-dot-align", (1440., 790.), evs);
+    cx.update_window(h, |_, w, _| {
+        let (marked, plain) = (w.find("year-dot-2026-10-14-0").bounds(), w.find("year-dot-2026-10-15-0").bounds());
+        assert_eq!(marked.top(), plain.top(), "dots align across the week: {marked:?} vs {plain:?}");
+    })
+    .unwrap();
 }

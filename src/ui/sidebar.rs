@@ -198,8 +198,9 @@ impl Shell {
                     .justify_between()
                     .mb(px(6.))
                     .text_size(px(12.))
-                    .child(self.model.mini_title())
-                    .child(div().flex().child(prev).child(next)),
+                    .child(prev)
+                    .child(div().id("mini-title").test_support().flex_1().text_center().whitespace_nowrap().overflow_hidden().child(self.model.mini_title()))
+                    .child(next),
             )
             .child(div().flex().children(letters.into_iter().map(|l| {
                 div()

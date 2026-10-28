@@ -19,6 +19,11 @@ impl MonthGrid {
         self.days.chunks(7)
     }
 
+    /// Per week row: whether one of its days of this month shows a "+n" marker.
+    pub fn marked_weeks(&self, marks: &HashMap<NaiveDate, DayMarks>) -> Vec<bool> {
+        self.rows().map(|row| row.iter().any(|d| self.in_month(*d) && marks.get(d).is_some_and(|m| m.dots().1 > 0))).collect()
+    }
+
     pub fn in_month(&self, d: NaiveDate) -> bool {
         d.month() == self.month
     }
@@ -33,8 +38,24 @@ pub const MAX_DOTS: usize = 3;
 
 /// The date box of a day (guide: 22px tall for every date) and the dot row under it.
 pub const DATE_BOX: f32 = 22.;
-pub const DOTS_H: f32 = 8.;
-pub const DOTS_GAP: f32 = 2.;
+/// Side of a dot (the mock's), which is also the height of the dot row, and the gap between dots.
+pub const DOT_PX: f32 = 5.;
+pub const DOT_GAP: f32 = 1.;
+/// Line box of the "+n" marker: its 8px text needs more than the dot row.
+pub const MORE_H: f32 = 8.;
+/// Tallest a day grows (the mock's), and the most month columns.
+pub const DAY_MAX_H: f32 = 30.;
+pub const MAX_COLS: usize = 4;
+
+/// The "+n" marker text: counts above nine read "9+", so the row never outgrows a narrow day.
+pub fn more_label(hidden: usize) -> String {
+    if hidden > 9 { "9+".to_string() } else { format!("+{hidden}") }
+}
+
+/// Height of a week row: `day_h`, or the least that holds the date box and a "+n" line box when a day has a marker.
+pub fn row_height(day_h: f32, has_more: bool) -> f32 {
+    if has_more { day_h.max(DATE_BOX + MORE_H) } else { day_h }
+}
 
 /// What one day holds: how many events touch it and which calendars they belong to.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -84,11 +105,11 @@ pub fn day_name(date: NaiveDate, marks: Option<&DayMarks>) -> String {
 /// Gap between month columns.
 pub const MONTH_GAP: f32 = 16.;
 
-/// Month columns for a grid `width` px wide: three while each month keeps 220px (gaps included),
-/// then two, then one.
+/// Month columns for a grid `width` px wide: four while each month keeps 220px (gaps included),
+/// then three, two, one.
 pub fn columns_for(width: f32) -> usize {
     const MONTH_MIN: f32 = 220.;
-    (((width + MONTH_GAP) / (MONTH_MIN + MONTH_GAP)) as usize).clamp(1, 3)
+    (((width + MONTH_GAP) / (MONTH_MIN + MONTH_GAP)) as usize).clamp(1, MAX_COLS)
 }
 
 /// `(row, column)` of `month` (1..=12) in a grid of `cols` columns, filled row by row.
@@ -182,8 +203,8 @@ pub fn cursor_in(roving: Option<Cursor>, anchor: NaiveDate, year: i32) -> Cursor
     }
 }
 
-/// Height of one day: the date box, a gap and the dot row at the least, so a crowded window
-/// scrolls instead of squashing the date; up to 36 when there is room.
+/// Height of one day: the date box and the dot row at the least, so a crowded window
+/// scrolls instead of squashing the date; up to the mock's 30 when there is room.
 pub fn day_height(avail: f32, rows: usize) -> f32 {
-    (avail / rows.max(1) as f32).clamp(DATE_BOX + DOTS_GAP + DOTS_H, 36.)
+    (avail / rows.max(1) as f32).clamp(DATE_BOX + DOT_PX, DAY_MAX_H)
 }

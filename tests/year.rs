@@ -303,7 +303,7 @@ fn a_scrolled_away_cursor_gets_a_hint_and_arrowing_back_hides_it(cx: &mut TestAp
 
 #[gpui_kit::test]
 fn the_view_opens_with_the_anchor_month_on_screen_and_today_brings_it_back(cx: &mut TestAppContext) {
-    let (h, _) = open_year(cx, "year-placed", 1440.);
+    let (h, _) = open_year_with(cx, "year-placed", (960., 600.), evs());
     let on_screen = |cx: &mut TestAppContext| {
         cx.update_window(h, |_, w, cx| {
             (0..2).for_each(|_| w.render_frame(cx));
@@ -312,7 +312,7 @@ fn the_view_opens_with_the_anchor_month_on_screen_and_today_brings_it_back(cx: &
         })
         .unwrap()
     };
-    assert!(on_screen(cx), "October, the anchor's month, is scrolled to at 1440x900");
+    assert!(on_screen(cx), "October, the anchor's month, is scrolled to when the months do not fit (960x600)");
     focus_grid(cx, h);
     keys(cx, h, &["pageup"; 9]);
     assert!(!on_screen(cx), "the cursor went to January, October is away");

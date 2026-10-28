@@ -249,3 +249,19 @@ fn an_unavailable_swatch_never_changes_the_setting(cx: &mut TestAppContext) {
     });
     assert!(!p.exists(), "no save for a refused swatch");
 }
+
+#[gpui_kit::test]
+fn the_mini_month_title_is_centered_between_its_arrows(cx: &mut TestAppContext) {
+    let (h, _) = open(cx, &tmp("mini-head"), 1280.);
+    cx.update_window(h, |_, w, cx| {
+        w.render_frame(cx);
+        let (prev, title, next, mini) = (w.find("mini-prev").bounds(), w.find("mini-title").bounds(), w.find("mini-next").bounds(), w.find("mini-month").bounds());
+        assert!(prev.right() <= title.left() && title.right() <= next.left(), "title sits between the arrows");
+        assert!(prev.left() < mini.left() + px(16.) && next.right() > mini.right() - px(16.), "arrows at the two ends");
+        assert!((title.center().x - mini.center().x).abs() <= px(1.), "title centered: {title:?} in {mini:?}");
+        assert!((title.left() - prev.right()).abs() <= px(0.5) && (next.left() - title.right()).abs() <= px(0.5), "title fills the gap, so centering does not depend on arrow widths");
+        assert_eq!(w.find_by_label("Previous month in mini calendar").bounds(), prev);
+        assert_eq!(w.find_by_label("Next month in mini calendar").bounds(), next);
+    })
+    .unwrap();
+}

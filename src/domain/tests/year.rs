@@ -101,7 +101,9 @@ fn day_names_carry_the_date_and_the_count() {
 
 #[test]
 fn columns_follow_the_width_with_the_gaps_counted() {
-    assert_eq!(columns_for(1156.), 3);
+    assert_eq!(columns_for(1124.), 4, "the 1440 window with its sidebar");
+    assert_eq!((columns_for(928.), columns_for(927.)), (4, 3), "four months of 220 with three gaps are 928");
+    assert_eq!(columns_for(2000.), 4, "never more than four");
     assert_eq!(columns_for(848.), 3, "the 960 window with a rail");
     // Three months of 220 with two 16 gaps are 692; two are 456; one is 220.
     assert_eq!((columns_for(692.), columns_for(691.)), (3, 2));
@@ -199,9 +201,30 @@ fn the_cursor_starts_on_the_anchor_or_inside_the_year() {
 #[test]
 fn day_height_never_squashes_the_date_box() {
     assert_eq!(DATE_BOX, 22., "guide: date box 22px");
-    assert_eq!(day_height(100., 24), 32., "date box, gap and the 8px dot row");
-    assert!(day_height(0., 24) >= DATE_BOX + DOTS_GAP + DOTS_H);
-    assert_eq!(day_height(840., 24), 35.);
-    assert_eq!(day_height(1000., 20), 36.);
-    assert_eq!(day_height(500., 0), 36.);
+    assert_eq!(day_height(100., 24), 27., "date box and the 5px dot row");
+    assert!(day_height(0., 24) >= DATE_BOX + DOT_PX);
+    assert_eq!(day_height(696., 24), 29.);
+    assert_eq!(day_height(1000., 20), 30.);
+    assert_eq!(day_height(500., 0), 30.);
+}
+
+#[test]
+fn the_marker_reads_plus_n_and_caps_at_nine_plus() {
+    assert_eq!((more_label(1), more_label(9), more_label(10), more_label(40)), ("+1".to_string(), "+9".to_string(), "9+".to_string(), "9+".to_string()));
+}
+
+#[test]
+fn a_week_with_a_marker_is_tall_enough_for_its_own_line_box() {
+    assert_eq!(row_height(27., false), 27.);
+    assert_eq!(row_height(27., true), DATE_BOX + MORE_H);
+    assert_eq!(row_height(DAY_MAX_H, true), DAY_MAX_H);
+}
+
+#[test]
+fn marked_weeks_flags_the_week_rows_that_hold_a_plus_marker() {
+    let crowd: Vec<Event> = (0..5).map(|c| Event::timed(c as u64 + 1, "E", c, at(10, 14, 9), at(10, 14, 10))).collect();
+    let marks = day_marks(&crowd.iter().collect::<Vec<_>>(), 2026);
+    let oct = year_grids(2026, Weekday::Mon).remove(9);
+    assert_eq!(oct.marked_weeks(&marks), vec![false, false, true, false, false], "Oct 14 is in the third row");
+    assert_eq!(year_grids(2026, Weekday::Mon)[0].marked_weeks(&marks).iter().filter(|m| **m).count(), 0);
 }

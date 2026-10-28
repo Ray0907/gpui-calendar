@@ -99,13 +99,18 @@ pub fn shape_of(id: u8) -> Shape {
 }
 
 pub fn shape(kind: Shape, color: Hsla) -> impl IntoElement {
+    shape_sized(kind, color, SHAPE_PX)
+}
+
+/// `shape` in a box of `size` px (the Year view's dots are smaller).
+pub fn shape_sized(kind: Shape, color: Hsla, size: f32) -> impl IntoElement {
     match kind {
-        Shape::Circle => div().size(px(SHAPE_PX)).flex_none().rounded_full().bg(color).into_any_element(),
-        Shape::Square => div().size(px(SHAPE_PX)).flex_none().rounded(px(2.)).bg(color).into_any_element(),
+        Shape::Circle => div().size(px(size)).flex_none().rounded_full().bg(color).into_any_element(),
+        Shape::Square => div().size(px(size)).flex_none().rounded(px((size / 4.).min(2.))).bg(color).into_any_element(),
         Shape::Diamond => canvas(
             |_, _, _| (),
             move |b, _, window, _| {
-                let (cx, cy, r) = (b.center().x, b.center().y, px(DIAMOND_RADIUS));
+                let (cx, cy, r) = (b.center().x, b.center().y, px(DIAMOND_RADIUS * size / SHAPE_PX));
                 let mut p = PathBuilder::fill();
                 p.move_to(point(cx, cy - r));
                 p.line_to(point(cx + r, cy));
@@ -117,7 +122,7 @@ pub fn shape(kind: Shape, color: Hsla) -> impl IntoElement {
                 }
             },
         )
-        .size(px(SHAPE_PX))
+        .size(px(size))
         .flex_none()
         .into_any_element(),
     }

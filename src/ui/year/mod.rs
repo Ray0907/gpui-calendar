@@ -13,10 +13,10 @@ use gpui_kit::{
     Role, ScrollHandle, SharedString, StatefulInteractiveElement, Styled, TestSupportExt, Window, div, px, prelude::*,
 };
 
-use super::controls::{c, ring, shape, shape_of};
+use super::controls::{c, ring, shape_of, shape_sized};
 use super::shell::{CHROME_H as SHELL_CHROME_H, Shell};
 use crate::domain::month::grid_width;
-use crate::domain::year::{Cursor, DATE_BOX, DOTS_GAP, DOTS_H, DayMarks, MONTH_GAP, MonthGrid, columns_for, cursor_in, day_height, month_at, month_cell};
+use crate::domain::year::{Cursor, DATE_BOX, DOT_GAP, DOT_PX, DayMarks, MAX_COLS, MONTH_GAP, MORE_H, MonthGrid, columns_for, more_label, row_height, cursor_in, day_height, month_at, month_cell};
 use cache::{Cache, Key};
 use crate::theme::resolve::Theme;
 
@@ -33,9 +33,9 @@ pub struct YearView {
     pub(super) scroll: ScrollHandle,
     /// Month columns of the last render: the scroll target of an arrow step.
     pub(super) cols: usize,
-    /// The reset count (`Model::year_epoch`) the scroll was last placed for: every reset (Today, Prev/Next,
-    /// a view change) brings the anchor's month on screen, whether or not the anchor moved.
-    placed: Option<u32>,
+    /// The reset count (`Model::year_epoch`) and column count the scroll was last placed for: every reset (Today, Prev/Next,
+    /// a view change, a resize to another column count) brings the anchor's month on screen, whether or not the anchor moved.
+    placed: Option<(u32, usize)>,
     cache: Option<Rc<Cache>>,
     builds: usize,
     /// Day buttons built by the last frame: one per day of the year, whatever the grids show twice.
@@ -44,7 +44,7 @@ pub struct YearView {
 
 impl YearView {
     pub fn new(cx: &mut gpui_kit::App) -> Self {
-        Self { focus: cx.focus_handle(), scroll: ScrollHandle::new(), cols: 3, placed: None, cache: None, builds: 0, buttons: Cell::new(0) }
+        Self { focus: cx.focus_handle(), scroll: ScrollHandle::new(), cols: MAX_COLS, placed: None, cache: None, builds: 0, buttons: Cell::new(0) }
     }
 }
 
@@ -66,8 +66,8 @@ impl Shell {
         let cols = self.year.cols;
         // Arrow keys scroll to their own stop; after a reset the anchor's month is the one to show.
         let epoch = self.model.year_epoch();
-        if self.year.placed != Some(epoch) {
-            self.year.placed = Some(epoch);
+        if self.year.placed != Some((epoch, cols)) {
+            self.year.placed = Some((epoch, cols));
             if self.model.year_cursor.is_none() {
                 self.year.scroll.scroll_to_top_of_item(month_cell(self.model.anchor.month(), cols).0);
             }
@@ -100,7 +100,10 @@ impl Shell {
         // Week rows stacked down the page (the tallest month of each row): the day height fills the window.
         let nrows = 12usize.div_ceil(cols);
         let stacked: usize = (0..nrows).map(|r| (0..cols).filter_map(|col| month_at(r, col, cols)).map(|m| grids[m as usize - 1].rows().count()).max().unwrap_or(0)).sum();
-        let avail = f32::from(window.viewport_size().height) - CHROME_H - nrows as f32 * (MONTH_HEAD_H + GAP) + GAP;
+        // Marker weeks grow by at most this much each (at the shortest day); the tallest month of each row bounds it.
+        let grow: usize = (0..nrows).map(|r| (0..cols).filter_map(|col| month_at(r, col, cols)).map(|m| grids[m as usize - 1].marked_weeks(&cache.marks).into_iter().filter(|x| *x).count()).max().unwrap_or(0)).sum();
+        let grow = grow as f32 * (row_height(DATE_BOX + DOT_PX, true) - DATE_BOX - DOT_PX);
+        let avail = f32::from(window.viewport_size().height) - CHROME_H - nrows as f32 * (MONTH_HEAD_H + GAP) + GAP - grow;
         let day_h = day_height(avail, stacked);
         let rows: Vec<_> = (0..nrows)
             .map(|r| {
@@ -196,7 +199,9 @@ impl Shell {
         let head = div().flex().children(weekdays.iter().map(|w| {
             div().flex_1().h(px(18.)).flex().items_center().justify_center().text_size(px(11.)).font_weight(FontWeight::SEMIBOLD).text_color(c(n.t3)).child(w.to_uppercase())
         }));
-        let rows = g.rows().map(|row| {
+        let marked = g.marked_weeks(&cache.marks);
+        let rows = g.rows().zip(marked).map(|(row, has_more)| {
+            let day_h = row_height(day_h, has_more);
             let days = row.iter().map(|&d| if g.in_month(d) { self.year_day(t, d, cache, cursor == Some(Cursor::Day(d)), day_h, cx) } else { self.year_pad(t, d, day_h) });
             div().flex().children(days)
         });
@@ -240,17 +245,16 @@ impl Shell {
         // without a theme gets a neutral dot. Only calendars past the third are counted in a "+n".
         let (shown, hidden) = marks.map_or((&[][..], 0), DayMarks::dots);
         let dots = div()
-            .h(px(DOTS_H))
-            .mt(px(DOTS_GAP))
+            .h(px(DOT_PX))
             .flex()
-            .items_center()
-            .gap(px(2.))
+            .items_start()
+            .gap(px(DOT_GAP))
             .children(shown.iter().map(|&id| {
-                let dot = shape(shape_of(id), t.cal(id).map_or(c(n.t3), |k| c(k.dot)));
+                let dot = shape_sized(shape_of(id), t.cal(id).map_or(c(n.t3), |k| c(k.dot)), DOT_PX);
                 div().id(SharedString::from(format!("year-dot-{date}-{id}"))).test_support().child(dot)
             }))
             .when(hidden > 0, |s| {
-                s.child(div().id(SharedString::from(format!("year-more-{date}"))).test_support().text_size(px(9.)).line_height(px(DOTS_H)).text_color(c(n.t2)).child(format!("+{hidden}")))
+                s.child(div().id(SharedString::from(format!("year-more-{date}"))).test_support().flex_none().text_size(px(8.)).line_height(px(MORE_H)).text_color(c(n.t2)).child(more_label(hidden)))
             });
         let cell = div()
             .id(SharedString::from(format!("year-day-{date}")))
