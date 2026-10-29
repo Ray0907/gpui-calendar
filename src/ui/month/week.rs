@@ -81,9 +81,11 @@ impl Shell {
     fn day_cell(&self, t: &Theme, date: NaiveDate, shown: u32, cursor: bool, cx: &Context<Self>) -> AnyElement {
         let n = &t.neutral;
         let weekend = is_weekend(date);
-        let num = date.format("%-d").to_string();
+        // The first of a month carries its name (mock: "Oct 1").
+        let num = date.format(if date.day() == 1 { "%b %-d" } else { "%-d" }).to_string();
         // The ring's shadow shows through a box with no fill, so the cursor's number gets the gap color (today's accent wins below).
-        let number = div().min_w(px(22.)).h(px(22.)).flex().items_center().justify_center().rounded_full().when(cursor, |s| s.bg(c(n.surface))).child(num);
+        // A month name makes the label wider than the 22px circle: pad it so a today or cursor fill is a pill with air round the text, not one hugging it.
+        let number = div().id(SharedString::from(format!("month-num-{date}"))).test_support().min_w(px(22.)).h(px(22.)).when(date.day() == 1, |s| s.px(px(6.))).flex().items_center().justify_center().rounded_full().when(cursor, |s| s.bg(c(n.surface))).child(div().id(SharedString::from(format!("month-numtext-{date}"))).test_support().child(num));
         let label = if date == self.model.today {
             number.bg(c(t.accent)).text_color(c(t.accent_on)).font_weight(FontWeight::SEMIBOLD)
         } else if date.month() != shown {

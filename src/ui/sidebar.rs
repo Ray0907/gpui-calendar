@@ -294,7 +294,7 @@ impl Shell {
             .justify_center()
             .rounded_full()
             .text_size(px(12.))
-            .text_color(if d.out_of_month { c(n.t3) } else { c(n.t1) })
+            .text_color(c(n.t1)) // the mock's `#root .app button{color:inherit}` outranks `.mini .g button.o`: out-of-month days are full strength
             .aria_toggled(if d.selected { Toggled::True } else { Toggled::False });
         // Both marks can apply to one day: the accent circle (today) and the ink ring (selected).
         if d.accent_fill() {

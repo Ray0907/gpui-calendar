@@ -2,8 +2,8 @@
 
 use gpui_kit::component::IconName;
 use gpui_kit::{
-    AnyElement, BoxShadow, ClickEvent, Context, FontWeight, Hsla, InteractiveElement, IntoElement, ParentElement, Role,
-    StatefulInteractiveElement, Styled, TestSupportExt, Toggled, Window, div, point, px, prelude::*,
+    AnyElement, ClickEvent, Context, FontWeight, Hsla, InteractiveElement, IntoElement, ParentElement, Role,
+    StatefulInteractiveElement, Styled, TestSupportExt, Toggled, Window, div, px, prelude::*,
 };
 
 use super::controls::{c, card_hover, control, control_disabled, focus_ring, ghost_hover, icon, ink_hover, ink_press, shape, shape_of};
@@ -18,6 +18,20 @@ fn status_name(hint: &str) -> String {
     if hint.is_empty() { "Status".into() } else { hint.into() }
 }
 
+/// Mock v8 metrics: the swatch target, its selected ring (2px ink + 2px gap round the dot), the dot, and the check on it.
+const SWATCH: f32 = 36.;
+const RING: f32 = 32.;
+const DOT: f32 = 24.;
+const CHECK: f32 = 14.;
+/// Row title and help line heights (mock: 13px title and 12px help at the 1.4 line-height) and the 40px button height.
+const ROW_TITLE_LINE: f32 = 18.2;
+const ROW_HELP_LINE: f32 = 16.8;
+const BUTTON_H: f32 = 40.;
+/// The status line's one-line height.
+const STATUS_H: f32 = 18.;
+/// The unavailable swatch's opacity: the mock's `.sw[aria-disabled=true]` 0.35, not the 0.5 of other disabled controls.
+const SWATCH_UNAVAILABLE: f32 = 0.35;
+
 const MODES: [(Mode, &str); 3] = [(Mode::Light, "Light"), (Mode::Dark, "Dark"), (Mode::System, "System")];
 
 /// One settings row: 160px label column (title + small help) and the controls.
@@ -27,15 +41,15 @@ fn row(t: &Theme, title: &'static str, help: &'static str, body: impl IntoElemen
         .flex()
         .items_center()
         .gap(px(20.))
-        .py(px(10.))
+        .py(px(14.))
         .border_t_1()
         .border_color(c(n.line))
         .child(
             div()
                 .w(px(160.))
                 .flex_none()
-                .child(div().font_weight(FontWeight::SEMIBOLD).child(title))
-                .children((!help.is_empty()).then(|| div().text_size(px(12.)).text_color(c(n.t3)).child(help))),
+                .child(div().line_height(px(ROW_TITLE_LINE)).font_weight(FontWeight::SEMIBOLD).child(title))
+                .children((!help.is_empty()).then(|| div().text_size(px(12.)).line_height(px(ROW_HELP_LINE)).text_color(c(n.t3)).child(help))),
         )
         .child(div().flex_1().child(body))
 }
@@ -56,25 +70,27 @@ struct Swatch {
 impl Shell {
     fn swatch(&mut self, t: &Theme, s: Swatch, window: &mut Window, cx: &mut Context<Self>, on: impl Fn(&mut Self) + 'static) -> AnyElement {
         let n = &t.neutral;
-        let spread = |color, px_| BoxShadow { color, offset: point(px(0.), px(0.)), blur_radius: px(0.), spread_radius: px(px_), inset: false };
         let dot = div()
-            .size(px(24.))
+            .id(format!("{}-dot", s.id))
+            .test_support()
+            .size(px(DOT))
             .rounded_full()
             .bg(s.color)
             .flex()
             .items_center()
             .justify_center()
-            .when(s.selected, |d| d.shadow(vec![spread(c(n.surface), 2.), spread(c(t.ink), 4.)]))
-            .children(s.selected.then(|| icon(IconName::Check, s.check, 14.)));
+            .children(s.selected.then(|| icon(IconName::Check, s.check, CHECK)));
+        // Selected: a 2px ink circle, then a 2px gap, then the dot (mock). A border, since a spread shadow does not follow the corner radius.
+        let dot = div().id(format!("{}-ring", s.id)).test_support().size(px(RING)).flex().items_center().justify_center().rounded_full().when(s.selected, |d| d.border_2().border_color(c(t.ink))).child(dot);
         let unavailable = s.unavailable.is_some();
         control_disabled(s.id, Role::Button, s.label, unavailable, c(n.surface), c(t.ring), window, cx)
-            .size(px(36.))
+            .size(px(SWATCH))
             .flex()
             .items_center()
             .justify_center()
             .rounded_full()
-            // Disabled is 50% with no hover (state table); the swatch stays a focus target.
-            .when(unavailable, |d| d.opacity(0.5))
+            // Unavailable is 35% (mock) with no hover; the swatch stays a focus target.
+            .when(unavailable, |d| d.opacity(SWATCH_UNAVAILABLE))
             .when(!unavailable, |d| d.hover(ghost_hover(t, n.surface)))
             .aria_toggled(if s.selected { Toggled::True } else { Toggled::False })
             .child(dot)
@@ -89,7 +105,7 @@ impl Shell {
     fn choice_pill(&mut self, t: &Theme, id: String, label: &'static str, on: bool, window: &mut Window, cx: &mut Context<Self>, act: impl Fn(&mut Self) + 'static) -> AnyElement {
         let n = &t.neutral;
         control(id, Role::Button, label, c(n.surface), c(t.ring), window, cx)
-            .h(px(40.))
+            .h(px(BUTTON_H))
             .px(px(16.))
             .flex()
             .items_center()
@@ -112,10 +128,10 @@ impl Shell {
     fn neutral_button(&mut self, t: &Theme, nt: Neutral, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let n = &t.neutral;
         let on = self.model.store.settings.appearance.neutral == nt;
-        let set = neutral(nt, t.dark);
+        let set = neutral(nt, false); // the mock draws the chips from the light set in both themes
         let chips = [set.page, set.t3, set.t1].map(|x| div().size(px(12.)).rounded_full().ml(px(-3.)).bg(c(x)).border_1().border_color(c(n.line)));
         control(format!("neutral-{nt:?}"), Role::Button, format!("{nt:?}"), c(n.surface), c(t.ring), window, cx)
-            .h(px(40.))
+            .h(px(BUTTON_H))
             .px(px(14.))
             .flex()
             .items_center()
@@ -164,7 +180,9 @@ impl Shell {
         let hint = self.model.hint.clone();
         let reset = control("reset-appearance", Role::Button, "Reset to defaults", c(n.surface), c(t.ring), window, cx)
             .mt(px(6.))
-            .py(px(4.))
+            .h(px(BUTTON_H))
+            .flex()
+            .items_center()
             .px(px(6.))
             .ml(px(-6.))
             .rounded(px(6.))
@@ -178,7 +196,7 @@ impl Shell {
                 this.sync(cx);
             }));
         let back = control("back-to-calendar", Role::Button, "Back to calendar", c(n.surface), c(t.ring), window, cx)
-            .h(px(40.))
+            .h(px(BUTTON_H))
             .pl(px(8.))
             .pr(px(12.))
             .flex()
@@ -222,13 +240,13 @@ impl Shell {
                     .child(row(t, "Mode", "", div().flex().gap(px(8.)).children(modes)))
                     .child(row(t, "Accent", "Marks today", div().flex().flex_wrap().gap(px(2.)).children(accents)))
                     .child(row(t, "Neutral", "Tint of the grays", div().flex().gap(px(8.)).children(neutrals)))
-                    .child(row(t, "Calendars", "One color each. The shape stays fixed.", div().flex().flex_col().gap(px(8.)).children(cals)))
+                    .child(row(t, "Calendars", "One color each. The shape stays fixed.", div().flex().flex_col().children(cals)))
                     .child(row(
                         t,
                         "",
                         "",
                         div()
-                            .child(div().id("status").test_support().role(Role::Status).aria_label(status_name(&hint)).min_h(px(18.)).text_size(px(12.)).text_color(c(n.t2)).child(hint.clone()))
+                            .child(div().id("status").test_support().role(Role::Status).aria_label(status_name(&hint)).min_h(px(STATUS_H)).line_height(px(STATUS_H)).text_size(px(12.)).text_color(c(n.t2)).child(hint.clone()))
                             .child(reset),
                     )),
             )

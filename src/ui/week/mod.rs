@@ -200,7 +200,6 @@ impl Shell {
                     .relative()
                     .flex_1()
                     .h_full()
-                    .child(div().absolute().inset_0().flex().children(frame.days.iter().map(|&d| div().flex_1().h_full().when(weekend(d), |s| s.bg(c(n.subtle))))))
                     .children(frame.bars.iter().filter_map(|b| self.week_bar(t, &frame, b, roving, hour24))),
             );
 

@@ -321,3 +321,21 @@ fn month_cells_show_weekday_names_and_mark_today(cx: &mut TestAppContext) {
     })
     .unwrap();
 }
+
+/// The first of a month reads "Nov 1": today's fill on it is a pill with 6px of air each side, while "2" stays the 22px circle.
+#[gpui_kit::test]
+fn first_of_month_label_is_a_padded_pill_and_other_days_stay_circles(cx: &mut TestAppContext) {
+    let nov_1 = NaiveDate::from_ymd_opt(2026, 11, 1).unwrap().and_hms_opt(9, 0, 0).unwrap();
+    let (h, _) = open_sized(cx, &tmp("month-first"), (1280., 900.), Rc::new(Cell::new(nov_1)), |_| {});
+    cx.update_window(h, |_, w, cx| {
+        w.render_frame(cx);
+        w.render_frame(cx);
+        let (first, second) = (w.find("month-num-2026-11-01").bounds(), w.find("month-num-2026-11-02").bounds());
+        assert_eq!(f32::from(first.size.height), 22., "pill height");
+        assert_eq!(f32::from(second.size.width), 22., "a single digit stays a 22px circle");
+        let text = w.find("month-numtext-2026-11-01").bounds();
+        assert!((f32::from(first.size.width - text.size.width) - 12.).abs() < 0.1, "6px of air each side of the text, got {} around {}", f32::from(first.size.width), f32::from(text.size.width));
+        assert!(f32::from(text.left() - first.left()) > 5.9, "left air");
+    })
+    .unwrap();
+}
