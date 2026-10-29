@@ -20,6 +20,8 @@ use crate::theme::resolve::Theme;
 /// gpui's diagonal gradient line is the box side, CSS's is side * sqrt 2: start the stops at CSS's 14.6% and 85.4%, (1 - 1/sqrt 2) / 2 and its complement.
 const AVATAR_STOP_NEAR: f64 = 0.1464;
 const AVATAR_STOP_FAR: f64 = 1. - AVATAR_STOP_NEAR;
+/// Gap between the mini calendar's rows (mock `.mini .g`), the weekday row included.
+const MINI_ROW_GAP: f32 = 2.;
 
 /// Banner text sizes, and the line height the mock gives each: 1.4 times a size (guide 4, "line height 1.4").
 pub const BANNER_EYEBROW: f32 = 11.;
@@ -227,6 +229,25 @@ impl Shell {
         let letters = self.model.mini_weekdays();
         let days = self.model.mini_days();
         let cells: Vec<_> = days.iter().map(|d| self.mini_day(t, d, window, cx)).collect();
+        // Its own non-wrapping row: seven `flex_1` cells always fit one line, whatever fraction the width divides into.
+        let weekdays: Vec<_> = letters
+            .into_iter()
+            .enumerate()
+            .map(|(i, l)| {
+                div()
+                    .id(format!("mini-weekday-{i}"))
+                    .test_support()
+                    .flex_1()
+                    .flex()
+                    .justify_center()
+                    .h(px(24.))
+                    .items_center()
+                    .text_size(px(11.))
+                    .font_weight(FontWeight::SEMIBOLD)
+                    .text_color(c(n.t3))
+                    .child(l)
+            })
+            .collect();
         div()
             .id("mini-month")
             .test_support()
@@ -243,20 +264,8 @@ impl Shell {
                     .child(div().id("mini-title").test_support().flex_1().text_center().whitespace_nowrap().overflow_hidden().child(self.model.mini_title()))
                     .child(next),
             )
-            .child(div().flex().children(letters.into_iter().map(|l| {
-                div()
-                    .w(px(28.))
-                    .flex_1()
-                    .flex()
-                    .justify_center()
-                    .h(px(24.))
-                    .items_center()
-                    .text_size(px(11.))
-                    .font_weight(FontWeight::SEMIBOLD)
-                    .text_color(c(n.t3))
-                    .child(l)
-            })))
-            .child(div().flex().flex_wrap().gap_y(px(2.)).children(cells))
+            .child(div().flex().mb(px(MINI_ROW_GAP)).children(weekdays))
+            .child(div().flex().flex_wrap().gap_y(px(MINI_ROW_GAP)).children(cells))
     }
 
     #[allow(clippy::too_many_arguments)]

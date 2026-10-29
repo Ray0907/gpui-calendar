@@ -21,11 +21,12 @@ use cache::{Cache, Key};
 use crate::theme::contrast::Rgb;
 use crate::theme::resolve::Theme;
 
-/// Padding around the grid. Month columns are `COL_GAP` apart and month rows `ROW_GAP`.
+/// Padding left, right and below the grid (mock `.yg`: 16 24 24); `PAD_TOP` is the top. Month columns are `COL_GAP` apart and month rows `ROW_GAP`.
 const PAD: f32 = 24.;
+const PAD_TOP: f32 = 16.;
 const COL_GAP: f32 = MONTH_GAP;
 /// What the window spends above and below the days: the shell's chrome and the grid's padding.
-const CHROME_H: f32 = SHELL_CHROME_H + 2. * PAD + RULE;
+const CHROME_H: f32 = SHELL_CHROME_H + PAD_TOP + PAD + RULE;
 /// The hairline under the header (the mock's grid border-top).
 const RULE: f32 = 1.;
 /// A month's title (28) and weekday row (24).
@@ -157,7 +158,9 @@ impl Shell {
                             cx.stop_propagation();
                         }
                     }))
-                    .p(px(PAD))
+                    .px(px(PAD))
+                    .pt(px(PAD_TOP))
+                    .pb(px(PAD))
                     .flex()
                     .flex_col()
                     .gap(px(ROW_GAP))

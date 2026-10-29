@@ -1,4 +1,4 @@
-//! The Year view's metrics from mock v8: grid padding 24, column gap 24, row gap 16, dot gap 2, and twelve months fit at 1440x900.
+//! The Year view's metrics from mock v8: grid padding 16 24 24, column gap 24, row gap 16, dot gap 2, and twelve months fit at 1440x900.
 mod common;
 
 use common::year::*;
@@ -13,7 +13,7 @@ fn padding_column_gap_and_dot_gap_follow_the_mock(cx: &mut TestAppContext) {
     cx.update_window(h, |_, w, _| {
         let (view, jan, feb) = (w.find("year-scroll").bounds(), w.find("year-month-2026-01").bounds(), w.find("year-month-2026-02").bounds());
         assert_eq!(jan.left() - view.left(), px(24.), "grid padding left");
-        assert_eq!(jan.top() - view.top(), px(24.), "grid padding top");
+        assert_eq!(jan.top() - view.top(), px(16.), "grid padding top");
         assert_eq!(feb.left() - jan.right(), px(24.), "column gap");
         let (a, b) = (w.find("year-dot-2026-10-14-0").bounds(), w.find("year-dot-2026-10-14-1").bounds());
         assert_eq!(b.left() - a.right(), px(DOT_GAP), "dot gap");
