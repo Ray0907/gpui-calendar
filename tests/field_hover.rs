@@ -64,8 +64,8 @@ fn main() {
             win.act(|w, cx| w.pointer_move(b.center(), None, cx));
             let b = bounds(&mut win);
             let lit = win.shot().mean(b.center().x.into(), f32::from(b.top()) + 0.5, 0.4);
-            // The date box shows its ring for keyboard focus only (design-states 3); the pointer moves above end that modality.
-            let want = if name.ends_with("date") { win.theme.neutral.border } else { ring };
+            // The date and time boxes show their ring for keyboard focus only (design-states 3); the pointer moves above end that modality.
+            let want = if name.ends_with("date") || name.ends_with("time") { win.theme.neutral.border } else { ring };
             assert!(delta(lit, want) <= 6, "{mode:?} {name}: focused and hovered outline {lit:?}, want {want:?} (not t2 {t2:?})");
             // Back to rest for the next field: pointer away, focus on the card.
             checks += 3;

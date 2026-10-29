@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use gpui_kit::{
     Animation, AnimationExt, AnyElement, ClickEvent, Anchor, App, Context, FocusHandle, Focusable, FontWeight, InteractiveElement, IntoElement,
-    ParentElement, Role, SharedString, StatefulInteractiveElement, Styled, TestSupportExt, Window, anchored, deferred, div, ease_out_quint, point,
+    MouseButton, ParentElement, Role, SharedString, StatefulInteractiveElement, Styled, TestSupportExt, Window, anchored, deferred, div, ease_out_quint, point,
     px, prelude::FluentBuilder,
 };
 
@@ -41,11 +41,11 @@ impl Shell {
         // The field with focus keeps its ring: only the others hover in `t2`.
         let calm = |h: Option<FocusHandle>, window: &Window, cx: &App| !h.is_some_and(|h| h.contains_focused(window, cx));
         let [calm_title, calm_notes] = [i.title.focus_handle(cx), i.notes.focus_handle(cx)].map(|h| calm(Some(h), window, cx));
-        let [calm_sd, calm_st, calm_ed, calm_et] = [Field::StartDate, Field::StartTime, Field::EndDate, Field::EndTime].map(|f| calm(ev.dates.focus(f, cx).or_else(|| ev.times.focus(f, cx)), window, cx));
+        let [calm_sd, calm_st, calm_ed, calm_et] = [Field::StartDate, Field::StartTime, Field::EndDate, Field::EndTime].map(|f| calm(ev.dates.focus(f, cx).or_else(|| ev.times.focus(f)), window, cx));
         let day = |this: &Self, f, name, id, calm| this.date_field(t, f, (name, id), ev, calm, cx);
         let (start_day, end_day) = (day(self, Field::StartDate, "Start date", "pop-start-date", calm_sd), day(self, Field::EndDate, "End date", "pop-end-date", calm_ed));
         // Greyed while the event is all day; the draft keeps the times.
-        let time = |f, name, id, calm| self.time_field(t, f, (name, id), ev, calm, cx);
+        let time = |f, name, id, calm| self.time_field(t, f, (name, id), ev, calm, window, cx);
         let start = pair(start_day, time(Field::StartTime, "Start time", "pop-start-time", calm_st));
         let end = pair(end_day, time(Field::EndTime, "End time", "pop-end-time", calm_et));
         let title = text_field(t, Field::Title, "Title", "pop-title", &i.title, ev, calm_title);
@@ -67,7 +67,7 @@ impl Shell {
 
         // The tab stops in reading order, for the focus trap.
         let keyed = |id: String, window: &mut Window, cx: &mut Context<Self>| window.use_keyed_state(SharedString::from(id), cx, |_, cx| cx.focus_handle()).read(cx).clone();
-        let input = |f: Field, cx: &mut Context<Self>| form.inputs.of(f).map(|i| i.focus_handle(cx)).or_else(|| form.dates.focus(f, cx)).or_else(|| form.times.focus(f, cx));
+        let input = |f: Field, cx: &mut Context<Self>| form.inputs.of(f).map(|i| i.focus_handle(cx)).or_else(|| form.dates.focus(f, cx)).or_else(|| form.times.focus(f));
         let mut order: Vec<_> = input(Field::Title, cx).into_iter().collect();
         order.push(keyed(format!("pop-cal-{}", draft.calendar), window, cx));
         let all_day_handle = keyed("pop-all-day".into(), window, cx);
@@ -100,6 +100,7 @@ impl Shell {
             .aria_label(if existing { "Edit event form" } else { "New event form" })
             .key_context(super::KEY_CONTEXT)
             .track_focus(&form.trap)
+            .on_mouse_down(MouseButton::Left, cx.listener(|this, _, _, cx| this.card_pressed(cx)))
             .on_action(cx.listener(|this, _: &super::TrapNext, window, cx| this.trap_tab(false, window, cx)))
             .on_action(cx.listener(|this, _: &super::TrapPrev, window, cx| this.trap_tab(true, window, cx)))
             .w(px(width))

@@ -445,7 +445,14 @@ impl Model {
         (Some(month), year)
     }
 
+    /// Leave the Appearance screen: the view and date it hid are still in the model.
+    pub fn back_to_calendar(&mut self) {
+        self.screen = Screen::Calendar;
+    }
+
+    /// Picking a day shows it, so it also leaves Appearance.
     pub fn pick_day(&mut self, d: NaiveDate) {
+        self.back_to_calendar();
         self.focus_anchor(d);
     }
 

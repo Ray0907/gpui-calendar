@@ -13,7 +13,7 @@ use gpui_kit::{
     Role, ScrollHandle, SharedString, StatefulInteractiveElement, Styled, TestSupportExt, Window, div, px, prelude::*,
 };
 
-use super::controls::{c, ring, shape_of, shape_sized, wash_hover};
+use super::controls::{Pointer, c, ring, shape_of, shape_sized, wash_hover};
 use super::shell::{CHROME_H as SHELL_CHROME_H, Shell};
 use crate::domain::month::grid_width;
 use crate::domain::year::{Cursor, DATE_BOX, DOT_GAP, DOT_PX, DayMarks, GRID_ROWS, MAX_COLS, MONTH_GAP, MORE_H, ROW_GAP, MonthGrid, columns_for, more_label, row_height, cursor_in, day_height, month_at, month_cell};
@@ -194,7 +194,7 @@ impl Shell {
             // The mock's PNG (v8) shows the title at the page's 13px, regular: its `font: inherit` button rule beats the 14px/600.
             .text_size(px(13.))
             .text_color(c(n.t1))
-            .cursor_pointer()
+            .pointer()
             .hover(|s| s.bg(wash_hover(n.t1, n.surface)))
             .active(|s| s.opacity(0.85))
             .when(cursor == Some(Cursor::Title(year, month)), |s| s.child(self.year_ring(t, format!("year-ring-month-{year}-{month:02}"), n.surface)))
@@ -277,7 +277,7 @@ impl Shell {
             .flex()
             .flex_col()
             .items_center()
-            .cursor_pointer()
+            .pointer()
             .hover(|s| s.bg(wash_hover(n.t1, backdrop)))
             .active(|s| s.opacity(0.85))
             .when(is_weekend(date), |s| s.bg(c(n.subtle)))

@@ -177,6 +177,23 @@ impl Shell {
                 this.model.reset_appearance();
                 this.sync(cx);
             }));
+        let back = control("back-to-calendar", Role::Button, "Back to calendar", c(n.surface), c(t.ring), window, cx)
+            .h(px(40.))
+            .pl(px(8.))
+            .pr(px(12.))
+            .flex()
+            .items_center()
+            .gap(px(4.))
+            .w_auto()
+            .rounded(px(10.))
+            .text_color(c(n.t2))
+            .hover(ghost_hover(t, n.surface))
+            .child(icon(IconName::ChevronLeft, c(n.t2), 16.))
+            .child("Back to calendar")
+            .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
+                this.model.back_to_calendar();
+                this.sync(cx);
+            }));
         div()
             .id("appearance")
             .test_support()
@@ -191,9 +208,10 @@ impl Shell {
                     .w_full()
                     .max_w(px(760.))
                     .px(px(28.))
-                    .pt(px(20.))
+                    .pt(px(12.))
                     .pb(px(12.))
-                    .child(div().text_size(px(20.)).font_weight(FontWeight::BOLD).child("Appearance"))
+                    // The way back is the first thing at the top left; the heading shares its row so the screen is no taller than before.
+                    .child(div().flex().items_center().gap(px(16.)).ml(px(-8.)).child(back).child(div().text_size(px(20.)).font_weight(FontWeight::BOLD).child("Appearance")))
                     .child(
                         div()
                             .mt(px(4.))

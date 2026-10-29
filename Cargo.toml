@@ -100,3 +100,11 @@ harness = false
 [[test]]
 name = "field_height"
 harness = false
+
+[[test]]
+name = "mini_selected"
+harness = false
+
+[[test]]
+name = "time_list_hover"
+harness = false

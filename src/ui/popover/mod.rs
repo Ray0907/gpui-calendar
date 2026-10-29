@@ -79,9 +79,9 @@ impl Form {
         Draft {
             title: text(&self.inputs.title),
             start_date: self.dates.text(Field::StartDate, cx),
-            start_time: self.times.text(Field::StartTime, cx),
+            start_time: self.times.text(Field::StartTime),
             end_date: self.dates.text(Field::EndDate, cx),
-            end_time: self.times.text(Field::EndTime, cx),
+            end_time: self.times.text(Field::EndTime),
             notes: self.inputs.notes.read(cx).value().to_string(),
             ..self.draft.clone()
         }
@@ -113,8 +113,8 @@ impl Shell {
         let Some(f) = self.pop.as_mut() else { return };
         if let Some(input) = f.inputs.of(field).cloned() {
             input.update(cx, |s, cx| s.set_value(text.to_string(), window, cx));
-        } else if f.times.of(field).is_some() {
-            f.times.set(field, text, window, cx);
+        } else if f.times.has(field) {
+            f.times.set(field, text);
             f.errors.retain(|e| e.field != field);
         }
         cx.notify();
@@ -226,7 +226,7 @@ impl Shell {
             title: input("Add a title", &draft.title, window, cx),
         };
         let dates = Dates::new(&draft.start_date, &draft.end_date, window, cx);
-        let times = Times::new(&draft.start_time, &draft.end_time, self.model.store.settings.time_format.hour24(), window, cx);
+        let times = Times::new(&draft.start_time, &draft.end_time, self.model.store.settings.time_format.hour24(), cx);
         let mut subs = dates.watch(window, cx);
         subs.extend(times.watch(window, cx));
         subs.push(cx.subscribe_in(&inputs.title, window, move |this, _, ev: &InputEvent, window, cx| match ev {
@@ -277,7 +277,7 @@ impl Shell {
                 form.errors = errors;
                 match form.inputs.of(first) {
                     Some(input) => input.update(cx, |s, cx| s.focus(window, cx)),
-                    None => form.dates.focus(first, cx).or_else(|| form.times.focus(first, cx)).iter().for_each(|h| h.focus(window, cx)),
+                    None => form.dates.focus(first, cx).or_else(|| form.times.focus(first)).iter().for_each(|h| h.focus(window, cx)),
                 }
             }
             Ok(event) => {
@@ -352,11 +352,11 @@ impl Shell {
         let mut d = f.read(cx);
         d.set_all_day(!d.all_day, hour24);
         for (field, text) in [(Field::StartTime, d.start_time.clone()), (Field::EndTime, d.end_time.clone())] {
-            f.times.set(field, &text, window, cx);
+            f.times.set(field, &text);
         }
         f.draft.all_day = d.all_day;
         f.errors.clear();
-        let in_time = [Field::StartTime, Field::EndTime].into_iter().any(|t| f.times.focus(t, cx).is_some_and(|h| h.contains_focused(window, cx)));
+        let in_time = [Field::StartTime, Field::EndTime].into_iter().any(|t| f.times.focus(t).is_some_and(|h| h.contains_focused(window, cx)));
         if d.all_day && in_time {
             f.all_day.borrow().iter().for_each(|h| h.focus(window, cx));
         }

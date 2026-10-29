@@ -13,8 +13,6 @@ struct Row {
     selected: Option<bool>,
     expanded: Option<bool>,
     disabled: Option<bool>,
-    /// The label of the nearest Group around it ("" if none).
-    group: String,
 }
 
 #[cfg(target_os = "macos")]
@@ -86,18 +84,9 @@ fn main() {
             .cx
             .update_window(win.h, |_, w, _| {
                 let all = w.elements();
-                let group_of = |e: &gpui_kit::test::ElementSnapshot| {
-                    all.iter()
-                        .filter(|a| a.path().len() < e.path().len() && e.path().starts_with(a.path()) && a.role() == Some(Role::Group))
-                        .max_by_key(|a| a.path().len())
-                        .and_then(|a| a.label())
-                        .unwrap_or("")
-                        .to_string()
-                };
                 all.iter()
                     .filter(|e| e.role().is_some())
                     .map(|e| Row {
-                        group: group_of(e),
                         id: e.path().last().map(|p| format!("{p:?}").trim_start_matches("Name(\"").trim_end_matches("\")").to_string()).unwrap_or_default(),
                         role: format!("{:?}", e.role().unwrap()),
                         label: e.label().unwrap_or("").to_string(),
@@ -115,15 +104,15 @@ fn main() {
 
         // 1. every interactive role has a name.
         // gpui-component's DatePicker names its trigger only by value (`aria_value`) and has no label setter: a known kit gap, the wrapping
-        // group carries the name. Exactly two such triggers per popover are expected (the two time fields have the same gap, named by their group "Start time" / "End time"), so a kit fix or a third unnamed one shows.
-        // A time field is exempt only inside the group that names it, so a time field anywhere else must carry its own name.
-        let kit_gap = |r: &Row| r.id.starts_with("NamedInteger(\"date-picker\"") || (r.id.starts_with("NamedInteger(\"time-field\"") && ["Start time", "End time"].contains(&r.group.as_str()));
+        // group carries the name. Exactly two such triggers per popover are expected, so a kit fix or a third unnamed one shows. The time
+        // fields are ours and carry their own name ("Start time, 09:30"): none is exempt.
+        let kit_gap = |r: &Row| r.id.starts_with("NamedInteger(\"date-picker\"");
         for r in rows.iter().filter(|r| interactive(&r.role) && r.label.trim().is_empty() && !kit_gap(r)) {
             bad(format!("{} {} has no accessible name", r.role, r.id));
         }
         let gaps = rows.iter().filter(|r| kit_gap(r) && r.label.is_empty()).count();
-        if gaps != if name.starts_with("popover") { 4 } else { 0 } {
-            bad(format!("{gaps} unnamed kit date-picker triggers and time fields, expected 4 (2 days, 2 times) in the popover and none elsewhere"));
+        if gaps != if name.starts_with("popover") { 2 } else { 0 } {
+            bad(format!("{gaps} unnamed kit date-picker triggers, expected 2 (the days) in the popover and none elsewhere"));
         }
         if name.starts_with("popover") {
             for field in ["Start date, ", "End date, "] {
@@ -243,7 +232,7 @@ fn main() {
         }
         out += "\n";
     }
-    out += "## known kit gap: the two popover date-picker triggers (ComboBox) and the two time fields (TimeInput) carry their value but no name; each sits in a Group named \"Start date, <day>\" / \"End date, <day>\" / \"Start time\" / \"End time\"\n\n";
+    out += "## known kit gap: the two popover date-picker triggers (ComboBox) carry their value but no name; each sits in a Group named \"Start date, <day>\" / \"End date, <day>\"\n\n";
     out += &format!("## ambiguous names (same role and name on several controls): {}\n{}\n", dup_report.len(), dup_report.join("\n"));
     let fails = fails.into_inner();
     out += &format!("\n{total} elements, {} failing checks\n{}\n", fails.len(), fails.join("\n"));

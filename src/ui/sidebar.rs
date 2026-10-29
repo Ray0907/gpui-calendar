@@ -64,7 +64,7 @@ impl Shell {
                     .px(px(8.))
                     .pb(px(12.))
                     .child(div().id("app-mark").test_support().flex_none().size(px(22.)).rounded(px(6.)).bg(c(t.ink)))
-                    .child(div().flex_1().text_size(px(16.)).font_weight(FontWeight::BOLD).child("Calendar"))
+                    .child(self.sidebar_title(t, window, cx))
                     .child(add),
             )
             .children(banner)
@@ -75,6 +75,25 @@ impl Shell {
             .child(div().id("calendar-list").test_support().flex_1().min_h(px(36.)).overflow_y_scroll().px(px(8.)).mx(px(-8.)).py(px(4.)).my(px(-4.)).children(rows))
             .child(mini)
             .child(user)
+            .into_any_element()
+    }
+
+    /// The "Calendar" title; on the Appearance screen it is a button back to the calendar.
+    fn sidebar_title(&mut self, t: &Theme, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        if self.model.screen != super::model::Screen::Appearance {
+            return div().id("sidebar-title").test_support().flex_1().text_size(px(16.)).font_weight(FontWeight::BOLD).child("Calendar").into_any_element();
+        }
+        control("sidebar-title", Role::Button, "Calendar", c(t.neutral.surface), c(t.ring), window, cx)
+            .flex_1()
+            .rounded(px(6.))
+            .text_size(px(16.))
+            .font_weight(FontWeight::BOLD)
+            .hover(ghost_hover(t, t.neutral.surface))
+            .child("Calendar")
+            .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
+                this.model.back_to_calendar();
+                this.sync(cx);
+            }))
             .into_any_element()
     }
 
@@ -277,7 +296,11 @@ impl Shell {
             b = b.hover(ghost_hover(t, n.surface));
         }
         if d.ring() {
-            b = b.shadow(vec![ring_mark(c(t.ink))]); // a shadow, not a border: the cell keeps its size
+            // A shadow, not a border: the cell keeps its size. A shadow paints under a box with no fill, so a selected day fills with its backdrop.
+            b = b.shadow(vec![ring_mark(c(t.ink))]);
+            if !d.accent_fill() {
+                b = b.bg(c(n.surface));
+            }
         }
         div().w(gpui_kit::relative(1. / 7.)).flex().justify_center().child(b.child(date.format("%-d").to_string()).on_click(cx.listener(
             move |this, _: &ClickEvent, _, cx| {

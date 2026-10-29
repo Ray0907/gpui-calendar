@@ -1,4 +1,5 @@
 mod controls;
+mod cursor;
 mod guard;
 mod model;
 mod nav;

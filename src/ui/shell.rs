@@ -306,12 +306,21 @@ impl Render for Shell {
             // (which hands it on) lets Esc get here. One Esc therefore never closes both.
             .capture_key_down(cx.listener(|this, e: &KeyDownEvent, window, cx| {
                 if e.keystroke.key == "escape" && this.pop.is_some() {
-                    this.close_popover(window, cx);
+                    // An open time list takes the first Escape; the next one closes the card.
+                    if !this.close_time_list(cx) {
+                        this.close_popover(window, cx);
+                    }
                     cx.stop_propagation();
                 }
             }))
             // Shortcuts: a grid that used the key has already stopped it.
             .on_key_down(cx.listener(|this, e: &KeyDownEvent, window, cx| {
+                if e.keystroke.key == "escape" && this.model.screen == Screen::Appearance {
+                    this.model.back_to_calendar();
+                    this.sync(cx);
+                    cx.stop_propagation();
+                    return;
+                }
                 if this.shortcut(&e.keystroke.key, e.keystroke.modifiers.modified(), e.is_held, window, cx) {
                     cx.stop_propagation();
                 }

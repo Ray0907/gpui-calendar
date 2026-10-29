@@ -14,7 +14,7 @@ use crate::domain::event::Event;
 use crate::domain::month::{Placed, item_name, layout_week};
 use crate::theme::contrast::Rgb;
 use crate::theme::resolve::Theme;
-use crate::ui::controls::{c, ghost_hover, hover_wash, ring, shape, shape_of};
+use crate::ui::controls::{Pointer, c, ghost_hover, hover_wash, ring, shape, shape_of};
 use crate::ui::popover::anchor_mark;
 use crate::ui::shell::Shell;
 
@@ -57,7 +57,7 @@ impl Shell {
                     let text = format!("+{} more", lay.more[col]);
                     let on = ringed == Some(col);
                     let backdrop = cell_backdrop(&t, start + chrono::Duration::days(col as i64));
-                    self.lane_box(top, col, 1).id(("month-more", ix * 7 + col)).test_support().role(Role::Button).aria_label(text.clone()).aria_selected(on).px(px(10.)).text_size(px(12.)).text_color(c(t.neutral.t2)).rounded(px(6.)).cursor_pointer().hover(ghost_hover(&t, backdrop)).active(|s| s.opacity(0.85)).when(on, |s| s.bg(c(t.neutral.surface)).shadow(ring(c(t.neutral.surface), c(t.ring)))).child(text).into_any_element()
+                    self.lane_box(top, col, 1).id(("month-more", ix * 7 + col)).test_support().role(Role::Button).aria_label(text.clone()).aria_selected(on).px(px(10.)).text_size(px(12.)).text_color(c(t.neutral.t2)).rounded(px(6.)).pointer().hover(ghost_hover(&t, backdrop)).active(|s| s.opacity(0.85)).when(on, |s| s.bg(c(t.neutral.surface)).shadow(ring(c(t.neutral.surface), c(t.ring)))).child(text).into_any_element()
                 }).collect();
                 div()
                     .id(("month-week", ix))
@@ -136,7 +136,7 @@ impl Shell {
             .rounded(px(6.))
             .text_size(px(12.))
             .font_weight(FontWeight::MEDIUM)
-            .cursor_pointer()
+            .pointer()
             // The ring shadow would show through a fill at 85% opacity, so a pressed chip drops it.
             .active(|s| s.opacity(0.85).shadow(vec![]))
             .when(focused, |s| s.bg(c(t.neutral.surface)).shadow(ring(c(t.neutral.surface), c(t.ring))))

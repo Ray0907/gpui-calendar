@@ -60,6 +60,40 @@ fn main() {
         assert!(delta(fill, win.theme.ink) <= 3, "{mode:?} {tint:?}: picked day {fill:?}, want ink {:?}", win.theme.ink);
         assert!(delta(label, win.theme.on_ink) <= 24, "{mode:?} {tint:?}: picked day label {label:?}, want on_ink {:?}", win.theme.on_ink);
         checks += 3;
+        // One layer, never two: hovering the picked day keeps the `ink` fill (no wash stacked on it, no change at all), and hovering an arrow
+        // washes its own box only, so the strip just outside the box stays the card's `surface`.
+        win.act(|w, cx| w.pointer_move(picked.center(), None, cx));
+        let held = mode_of(&win.shot().region(picked, 3.));
+        assert!(delta(held, win.theme.ink) <= 3, "{mode:?} {tint:?}: hovered picked day {held:?}, want ink {:?}", win.theme.ink);
+        // A hovered day washes its own cell and no neighbour: the 20th's two neighbours and the picked 14th's stay at rest.
+        for (hot, next_to) in [(20, [19, 21]), (14, [13, 15])] {
+            let id = find(&mut win, hot);
+            let b = win.bounds(&id);
+            win.act(|w, cx| w.pointer_move(b.center(), None, cx));
+            let shot = win.shot();
+            for d in next_to {
+                let nid = find(&mut win, d);
+                let nb = win.bounds(&nid);
+                let got = mode_of(&shot.region(Bounds { origin: point(nb.left() + px(2.), nb.center().y - px(3.)), size: size(px(3.), px(6.)) }, 0.));
+                assert!(delta(got, surface) <= 3, "{mode:?} {tint:?}: day {d} beside the hovered {hot}th is {got:?}, want rest {surface:?}");
+                checks += 1;
+            }
+        }
+        for id in ["calendar-prev", "calendar-next"] {
+            let b = win.bounds(id);
+            win.act(|w, cx| w.pointer_move(b.center(), None, cx));
+            let shot = win.shot();
+            let inside = mode_of(&shot.region(Bounds { origin: point(b.left() + px(2.), b.center().y - px(3.)), size: size(px(3.), px(6.)) }, 0.));
+            let want = wash_hover_rgb(win.theme.neutral.t1, surface);
+            assert!(delta(inside, want) <= 3, "{id} {mode:?} {tint:?}: hovered box {inside:?}, want one wash-hover {want:?}");
+            for (side, x, y) in [("left", b.left() - px(2.), b.center().y), ("right", b.right() + px(2.), b.center().y), ("above", b.center().x, b.top() - px(2.)), ("below", b.center().x, b.bottom() + px(2.))] {
+                let out = shot.mean(f32::from(x), f32::from(y), 0.4);
+                assert!(delta(out, surface) <= 3, "{id} {mode:?} {tint:?}: {side} of the box is {out:?}, want the card's surface {surface:?} (the wash must not spill)");
+            }
+            checks += 5;
+        }
+        win.act(|w, cx| w.pointer_move(point(px(2.), px(2.)), None, cx));
+        checks += 1;
     }
     println!("date hover ok: {checks} checks");
 }

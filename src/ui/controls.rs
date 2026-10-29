@@ -85,6 +85,21 @@ pub(super) fn card_hover(t: &Theme) -> impl FnOnce(StyleRefinement) -> StyleRefi
     move |s| s.border_color(outline)
 }
 
+/// The one way an element gets its pointer hand: clickable controls show the pointer, disabled ones the plain arrow (text fields keep the
+/// I-beam the kit gives them, event blocks their open and closed hand). `cursor_pointer` is not called anywhere else under `src/ui`;
+/// `src/ui/tests/cursor.rs` fails for a control built without this.
+pub trait Pointer: Styled + Sized {
+    fn pointer(self) -> Self {
+        self.cursor_pointer()
+    }
+
+    fn pointer_unless(self, disabled: bool) -> Self {
+        if disabled { self.cursor_default() } else { self.cursor_pointer() }
+    }
+}
+
+impl<T: Styled> Pointer for T {}
+
 /// A focusable, nameable, pressable element. `gap` is the color behind it (for the ring's gap);
 /// `ring_color` is the theme ring, or white on the banner.
 pub fn control<I: Into<ElementId>, L: Into<gpui_kit::SharedString>>(
@@ -118,7 +133,7 @@ pub fn control_disabled<I: Into<ElementId>, L: Into<gpui_kit::SharedString>>(
         .track_focus(&handle.tab_stop(true))
         .role(role)
         .aria_label(label)
-        .cursor_pointer()
+        .pointer_unless(disabled)
         // Disabled takes no press: `.active` would also replace the disabled 50% the caller sets.
         .when(!disabled, |d| d.active(|s| s.opacity(0.85)))
         .focus_visible(focus_ring(gap, ring_color, gap))

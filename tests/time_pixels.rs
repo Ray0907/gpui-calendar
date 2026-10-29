@@ -1,5 +1,5 @@
-//! Time field pixels, light and dark: it rests on the Title field's fill, the focused segment is `selection` (ink at 25%) over that fill,
-//! hover redraws the outline in `t2`, an unreadable draft time is invalid (danger outline) and a disabled field is the same field at 50%. Harness-less (Metal).
+//! Time field pixels, light and dark: it rests on the Title field's fill, hover redraws the outline in `t2`, keyboard focus turns it to `ring`
+//! (a mouse click does not), an unreadable draft time is invalid (danger outline) and a disabled field is the same field at 50%. Harness-less (Metal).
 #[cfg(target_os = "macos")]
 mod headless;
 
@@ -31,7 +31,7 @@ fn main() {
         std::thread::sleep(std::time::Duration::from_millis(400));
         win.render();
         let n = win.theme.neutral;
-        let id = win.cx.update(|cx| win.shell.read(cx).popover_time_id(Field::StartTime)).expect("a time field");
+        assert!(win.cx.update(|cx| win.shell.read(cx).popover_time_id(Field::StartTime)).is_some(), "a time field");
         // The box around the field, frame and all: the field's own id is on the content inside its 1px outline.
         let field = win.bounds("pop-start-time-box");
         let title = win.bounds("pop-title");
@@ -50,19 +50,17 @@ fn main() {
         win.act(|w, cx| w.pointer_move(point(px(2.), px(2.)), None, cx));
         assert!(delta(hot, n.t2) <= 8, "{mode:?}: hovered outline {hot:?}, want t2 {:?}", n.t2);
         checks += 2;
-        // Focus: the hour segment is selection (ink at 25%) over the fill.
-        let focus = win.cx.update(|cx| win.shell.read(cx).popover_time_focus(Field::StartTime, cx)).unwrap();
-        win.act(|w, cx| focus.focus(w, cx));
-        let hour = win.cx.update_window(win.h, |_, w, _| w.within(id.clone()).find("hour").bounds()).unwrap();
-        let seg = mode_of(&win.shot().region(hour, 1.));
-        let want = blend(win.theme.ink, rest, 0.25);
-        assert!(delta(seg, want) <= 4, "{mode:?}: focused segment {seg:?}, want ink 25% over fill {want:?}");
-        let other = win.cx.update_window(win.h, |_, w, _| w.within(id.clone()).find("minute").bounds()).unwrap();
-        assert!(delta(mode_of(&win.shot().region(other, 1.)), rest) <= 3, "{mode:?}: the other segment keeps the fill");
-        // Like the text inputs, the library marks focus by turning the outline into `ring`; the fill under the segments is kept.
+        // Focus from the keyboard: the outline turns `ring` and the fill is kept. A click focuses without the ring (the pointer ends keyboard modality).
+        assert!(headless::states::tab_to(&mut win, "pop-start-time-trigger", "tab"), "{mode:?}: Tab reaches the start time");
         let ring = edge(&mut win);
         assert!(delta(ring, win.theme.ring) <= 6, "{mode:?}: focus ring {ring:?}, want ring {:?}", win.theme.ring);
         assert!(delta(fill(&mut win, field), rest) <= 3, "{mode:?}: focus keeps the field fill");
+        win.act(|w, cx| w.click("pop-end-time-trigger", cx));
+        win.act(|w, cx| w.pointer_move(point(px(2.), px(2.)), None, cx));
+        let eb = win.bounds("pop-end-time-box");
+        let clicked = win.shot().mean(eb.center().x.into(), f32::from(eb.top()) + 0.5, 0.4);
+        assert!(delta(clicked, n.border) <= 8, "{mode:?}: a clicked box shows {clicked:?}, want the plain border {:?}", n.border);
+        win.act(|w, cx| w.click("pop-end-time-trigger", cx)); // close its list again
         checks += 4;
         // A draft time that cannot be read parks the field at 00:00: it must not look like a valid midnight, so it is invalid (the
         // `danger` role, `ink` in this palette) while the other, readable field keeps the plain outline.
@@ -75,7 +73,12 @@ fn main() {
         let (unread, read) = (top(&mut win, sb), top(&mut win, eb));
         assert!(delta(unread, win.theme.ink) <= 8, "{mode:?}: unreadable start time outline {unread:?}, want danger (ink) {:?}", win.theme.ink);
         assert!(delta(read, n.border) <= 8, "{mode:?}: readable end time outline {read:?}, want border {:?}", n.border);
-        checks += 2;
+        // Hovered, it is still invalid: no hover outline in error (state table, Field error).
+        win.act(|w, cx| w.pointer_move(sb.center(), None, cx));
+        let hot_unread = top(&mut win, sb);
+        win.act(|w, cx| w.pointer_move(point(px(2.), px(2.)), None, cx));
+        assert!(delta(hot_unread, win.theme.ink) <= 8, "{mode:?}: hovered unreadable start time {hot_unread:?}, want danger (ink) {:?}, not t2", win.theme.ink);
+        checks += 3;
         // Disabled: the same field at 50%, so its fill lies halfway to what is behind it.
         win.act(|w, cx| w.click("pop-all-day", cx));
         let dim = fill(&mut win, field);

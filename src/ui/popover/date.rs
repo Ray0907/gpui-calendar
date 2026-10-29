@@ -12,7 +12,7 @@ use super::Form;
 use super::fields::{FIELD_H, FIELD_R, error_note, label};
 use crate::domain::form::{Field, parse_date};
 use crate::theme::resolve::Theme;
-use crate::ui::controls::{c, field_hover, ring};
+use crate::ui::controls::{c, field_hover, ring, Pointer};
 use crate::ui::shell::Shell;
 
 /// ISO, as the draft and the field names write it.
@@ -105,7 +105,7 @@ impl RenderOnce for DateBox {
         let [border, field, text, ring_color, gap, ink] = self.colors;
         let handle = self.state.focus_handle(cx);
         let keyboard = window.last_input_was_keyboard() && handle.is_focused(window);
-        let cover = div().id(SharedString::from(format!("{}-cover", self.id))).test_support().absolute().inset_0().cursor_pointer().on_click(move |_, window, cx| {
+        let cover = div().id(SharedString::from(format!("{}-cover", self.id))).test_support().absolute().inset_0().pointer().on_click(move |_, window, cx| {
             // Not `occlude()`, which would also hide the box from `field_hover`; the kit's button below must not toggle it a second time.
             cx.stop_propagation();
             handle.focus(window, cx);

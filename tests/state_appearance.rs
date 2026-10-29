@@ -43,6 +43,7 @@ fn main() {
                 Spec::ghost(mode_off, |t| t.neutral.surface, |t| t.neutral.surface),
                 // Unavailable: no hover, no press (state table).
                 Spec::disabled(&off.expect("an unavailable swatch"), Probe::Left(3.)),
+                Spec::ghost("back-to-calendar", |t| t.neutral.surface, |t| t.neutral.surface),
                 Spec::ghost("reset-appearance", |t| t.neutral.surface, |t| t.neutral.surface),
             ]
         })

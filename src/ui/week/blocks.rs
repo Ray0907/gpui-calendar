@@ -12,7 +12,7 @@ use super::Shell;
 use crate::domain::event::Event;
 use crate::theme::resolve::Theme;
 use crate::ui::popover::anchor_mark;
-use crate::ui::controls::{c, elevation, ghost_hover, hover_wash, ring, shape, shape_of};
+use crate::ui::controls::{Pointer, c, elevation, ghost_hover, hover_wash, ring, shape, shape_of};
 
 /// Blocks at least this tall show the time under the title.
 const TWO_LINES: f32 = 34.;
@@ -71,6 +71,7 @@ impl Shell {
             .test_support()
             .role(Role::Button)
             .aria_label(text.clone())
+            .pointer()
             .size_full()
             .px(px(4.))
             .flex()
