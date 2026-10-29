@@ -92,3 +92,11 @@ name = "popover_form"
 
 [[test]]
 name = "popover"
+
+[[test]]
+name = "sidebar_ring"
+harness = false
+
+[[test]]
+name = "field_height"
+harness = false

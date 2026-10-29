@@ -32,15 +32,11 @@ fn main() {
         let kinds: [Kind; 6] = [
             ("Title", Box::new(|w| w.bounds("pop-title")), Box::new(|w| w.act(|win, cx| win.click("pop-title", cx)))),
             ("Notes", Box::new(|w| w.bounds("pop-notes-box")), Box::new(|w| w.act(|win, cx| win.click("pop-notes-box", cx)))),
-            ("Start date", Box::new(|w| date_bounds(w, Field::StartDate)), Box::new(|w| focus_date(w, Field::StartDate))),
-            ("End date", Box::new(|w| date_bounds(w, Field::EndDate)), Box::new(|w| focus_date(w, Field::EndDate))),
+            ("Start date", Box::new(|w| w.bounds("pop-start-date-box")), Box::new(|w| focus_date(w, Field::StartDate))),
+            ("End date", Box::new(|w| w.bounds("pop-end-date-box")), Box::new(|w| focus_date(w, Field::EndDate))),
             ("Start time", Box::new(|w| w.bounds("pop-start-time-box")), Box::new(|w| focus_time(w, Field::StartTime))),
             ("End time", Box::new(|w| w.bounds("pop-end-time-box")), Box::new(|w| focus_time(w, Field::EndTime))),
         ];
-        fn date_bounds(w: &mut Win, f: Field) -> Bounds<Pixels> {
-            let id = w.cx.update(|cx| w.shell.read(cx).popover_date_id(f)).expect("a date field");
-            w.cx.update_window(w.h, |_, win, _| win.find(id).bounds()).unwrap()
-        }
         fn focus_date(w: &mut Win, f: Field) {
             let focus = w.cx.update(|cx| w.shell.read(cx).popover_date_focus(f, cx)).unwrap();
             w.act(|win, cx| focus.focus(win, cx));
@@ -68,7 +64,9 @@ fn main() {
             win.act(|w, cx| w.pointer_move(b.center(), None, cx));
             let b = bounds(&mut win);
             let lit = win.shot().mean(b.center().x.into(), f32::from(b.top()) + 0.5, 0.4);
-            assert!(delta(lit, ring) <= 6, "{mode:?} {name}: focused and hovered outline {lit:?}, want ring {ring:?} (not t2 {t2:?})");
+            // The date box shows its ring for keyboard focus only (design-states 3); the pointer moves above end that modality.
+            let want = if name.ends_with("date") { win.theme.neutral.border } else { ring };
+            assert!(delta(lit, want) <= 6, "{mode:?} {name}: focused and hovered outline {lit:?}, want {want:?} (not t2 {t2:?})");
             // Back to rest for the next field: pointer away, focus on the card.
             checks += 3;
         }

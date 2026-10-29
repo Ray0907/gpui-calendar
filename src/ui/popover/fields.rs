@@ -35,10 +35,8 @@ pub(super) fn error_note(t: &Theme, id: &str, e: &'static str) -> impl IntoEleme
 /// sits under it (read as its description). `calm` is true while the field is not focused (it hovers in `t2`).
 pub(super) fn text_field(t: &Theme, field: Field, name: &'static str, id: &'static str, state: &Entity<InputState>, form: &Form, calm: bool) -> AnyElement {
     let error = form.error(field);
-    let input = Input::new(state)
-        .id(id)
-        .aria_label(name)
-        .h(px(FIELD_H))
+    // `Styled::h`, spelled out: `Input` has its own `h`, for multi-line inputs only, and a single line would stay 32px.
+    let input = Styled::h(Input::new(state).id(id).aria_label(name), px(FIELD_H))
         .rounded(px(FIELD_R))
         .bg(c(t.neutral.field))
         .when(error.is_some(), |i| i.border_2().border_color(c(t.ink)));

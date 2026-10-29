@@ -47,6 +47,19 @@ fn main() {
             assert!(delta(hot, want) <= 3 && (mode == Mode::Light || hot.luminance() <= 0.1) && (1.08..=1.25).contains(&c), "{id} {mode:?} {tint:?}: hover {hot:?} want wash-hover {want:?} over {backdrop:?}, contrast {c:.2}");
             checks += 1;
         }
+        // The rest of the card: its fill is `surface`, the picked day (Oct 14, the event's start) is `ink` with an `on_ink` label,
+        // and an arrow's icon rests in `t3`. A label or icon is thin: its darkest-to-lightest pixel is the role colour within 24.
+        let far = |shot: &Shot, b: Bounds<gpui_kit::Pixels>, from: gpui_calendar::theme::contrast::Rgb| shot.region(b, 2.).into_iter().max_by_key(|&p| delta(p, from)).unwrap();
+        let (prev, id14) = (win.bounds("calendar-prev"), find(&mut win, 14));
+        let picked = win.bounds(&id14);
+        let shot = win.shot();
+        let card = mode_of(&shot.region(Bounds { origin: point(prev.left() - px(10.), prev.center().y - px(3.)), size: size(px(3.), px(6.)) }, 0.));
+        let fill = mode_of(&shot.region(picked, 3.));
+        let label = far(&shot, picked, fill);
+        assert!(delta(card, surface) <= 3, "{mode:?} {tint:?}: card fill {card:?}, want surface {surface:?}");
+        assert!(delta(fill, win.theme.ink) <= 3, "{mode:?} {tint:?}: picked day {fill:?}, want ink {:?}", win.theme.ink);
+        assert!(delta(label, win.theme.on_ink) <= 24, "{mode:?} {tint:?}: picked day label {label:?}, want on_ink {:?}", win.theme.on_ink);
+        checks += 3;
     }
     println!("date hover ok: {checks} checks");
 }

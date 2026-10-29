@@ -70,8 +70,9 @@ impl Shell {
             .children(banner)
             .child(div().mt(px(4.)).mx(px(8.)).mb(px(6.)).child(eyebrow(t, "Calendars")))
             // The one region that gives way when the window is short, so the mini month and the
-            // Appearance entry below stay in the card.
-            .child(div().id("calendar-list").test_support().flex_1().min_h(px(36.)).overflow_y_scroll().children(rows))
+            // Appearance entry below stay in the card. Padding with a matching negative margin: the scroll clip ends 8px (4px
+            // above and below) outside the rows, so a row's focus ring (4px out) is not cut, and the rows do not move.
+            .child(div().id("calendar-list").test_support().flex_1().min_h(px(36.)).overflow_y_scroll().px(px(8.)).mx(px(-8.)).py(px(4.)).my(px(-4.)).children(rows))
             .child(mini)
             .child(user)
             .into_any_element()

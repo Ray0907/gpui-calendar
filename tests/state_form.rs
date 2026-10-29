@@ -42,6 +42,9 @@ fn main() {
         assert!(delta(got, want) <= 3, "{mode:?} scrim over {before:?}: got {got:?}, want black at {alpha} = {want:?}");
     }
 
+    for mode in [Mode::Light, Mode::Dark] {
+        date_box(mode);
+    }
     let form = event.clone();
     run(
         "form",

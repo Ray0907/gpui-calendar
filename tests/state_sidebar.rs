@@ -17,8 +17,8 @@ fn main() {
         vec![Group::new(View::Month, events, |_| {
             vec![
                 Spec::filled("add-event"),
-                Spec::row("calendar-row-0", |t| t.neutral.surface).noring(),
-                Spec::row("calendar-row-2", |t| t.neutral.surface).noring(),
+                Spec::row("calendar-row-0", |t| t.neutral.surface),
+                Spec::row("calendar-row-2", |t| t.neutral.surface),
                 Spec::ghost("mini-prev", |t| t.neutral.surface, |t| t.neutral.surface),
                 Spec::ghost("mini-next", |t| t.neutral.surface, |t| t.neutral.surface),
                 Spec::ghost("mini-day-2026-10-14", |t| t.neutral.surface, |t| t.neutral.surface),

@@ -209,7 +209,7 @@ const TABS: usize = 150;
 
 /// Press `key` until `id` has keyboard focus (the pointer stays where it is, so hover would stay on if the framework allowed it).
 /// False if never reached, or if focus stops moving (a text box that keeps Tab).
-fn tab_to(win: &mut Win, id: &str, key: &str) -> bool {
+pub fn tab_to(win: &mut Win, id: &str, key: &str) -> bool {
     let (mut last, mut same) = (None, 0);
     for _ in 0..TABS {
         win.cx.update_window(win.h, |_, w, cx| w.press(key, cx)).unwrap();
@@ -318,4 +318,51 @@ pub fn run(area: &str, groups: Vec<Group>) {
     artifact(&format!("states-{area}.txt"), &(rows.join("\n") + "\n"));
     assert!(fails.is_empty(), "{} of {checks} state checks failed:\n{}", fails.len(), fails.join("\n"));
     println!("{area} states ok: {checks} checks");
+}
+
+/// The popover's date box (Start date): the ring shows for keyboard focus only (a mouse-opened picker keeps the plain outline), and a
+/// refused day takes the 2px `ink` border like the Title field. A fresh window per step.
+pub fn date_box(mode: Mode) -> usize {
+    use gpui_calendar::domain::form::Field;
+    let fresh = |start: &'static str| {
+        let mut win = open(mode, Neutral::Cool, View::Month, vec![], (1280., 900.));
+        let shell = win.shell.clone();
+        let mut draft = gpui_calendar::domain::form::Draft::new_at(soon(), gpui_calendar::store::WORK, false);
+        draft.title = "Standup".into();
+        if !start.is_empty() {
+            draft.start_date = start.into();
+        }
+        win.act(|w, cx| shell.update(cx, |s, cx| s.show_draft(draft, w, cx)));
+        // The card fades in over 160 ms of wall clock (`popover/view.rs` FADE_MS).
+        std::thread::sleep(std::time::Duration::from_millis(400));
+        win.render();
+        win
+    };
+    let (n, ring) = { let t = fresh("").theme; (t.neutral, t.ring) };
+    let edge = |win: &mut Win, dy: f32| {
+        let b = win.bounds("pop-start-date-box");
+        win.shot().mean(b.center().x.into(), f32::from(b.top()) + dy, 0.4)
+    };
+    // Mouse: the click opens the picker and focuses it, but this is not keyboard focus.
+    let mut win = fresh("");
+    let id = win.cx.update(|cx| win.shell.read(cx).popover_date_id(Field::StartDate)).unwrap();
+    win.act(|w, cx| w.click(id.clone(), cx));
+    let got = edge(&mut win, 0.5);
+    assert!(delta(got, n.border) <= 6, "{mode:?} date box, mouse-focused: outline {got:?}, want border {:?} (no ring)", n.border);
+    // Keyboard: Esc closes the picker and the field keeps focus, now by key.
+    win.act(|w, cx| w.press("escape", cx));
+    let got = edge(&mut win, -3.);
+    assert!(delta(got, ring) <= 6, "{mode:?} date box, keyboard-focused: ring {got:?}, want {ring:?}");
+    // A day that cannot be read is refused: 2px `ink` border.
+    let mut win = fresh("not a day");
+    win.act(|w, cx| w.click("pop-save", cx));
+    for dy in [0.5, 1.5] {
+        let got = edge(&mut win, dy);
+        assert!(delta(got, win.theme.ink) <= 6, "{mode:?} date box, refused: {dy}px in is {got:?}, want ink {:?}", win.theme.ink);
+    }
+    4
+}
+
+fn soon() -> chrono::NaiveDateTime {
+    chrono::NaiveDate::from_ymd_opt(2026, 10, 14).unwrap().and_hms_opt(19, 0, 0).unwrap()
 }
