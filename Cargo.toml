@@ -10,6 +10,12 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 gpui-kit = "0.8.1"
 
+# Patched crates.io gpui-component 0.8.1 (pulled in by gpui-kit); the one change, in src/time/calendar.rs, adds cursor_pointer to enabled day cells and
+# prev/next arrows (month/year view cells in the popup deliberately keep the arrow cursor), which no wrapper can reach (the popup is a deferred, occluding child). vendor/ is git-ignored and built from patches/: a fresh clone
+# (or a re-vendor) must run `build/vendor-gpui-component.sh` before `cargo build`.
+[patch.crates-io]
+gpui-component = { path = "vendor/gpui-component" }
+
 [features]
 # Hooks the popover tests drive it with; the app does not build them. The self dev-dependency below turns them on for every test build.
 test-hooks = []

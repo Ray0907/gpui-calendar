@@ -1,0 +1,18 @@
+--- a/src/time/calendar.rs
++++ b/src/time/calendar.rs
+@@ -185,6 +185,15 @@
+                         })
+                     },
+                 )
++                // gpui-calendar patch: pointer hand on enabled day cells and the prev/next arrows.
++                .when(
++                    !state.is_disabled()
++                        && (matches!(
++                            state.kind(),
++                            CalendarItemKind::Previous | CalendarItemKind::Next
++                        ) || (state.kind() == CalendarItemKind::Day && !state.is_muted())),
++                    |this| this.cursor_pointer(),
++                )
+                 .when(state.is_active(), |this| {
+                     this.bg(cx.theme().tokens.primary)
+                         .text_color(cx.theme().primary_foreground)

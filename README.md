@@ -7,6 +7,10 @@ A desktop calendar written in Rust with [GPUI](https://www.gpui.rs) through the 
 - Rust 1.99.1, pinned by `rust-toolchain.toml` (rustup picks it up on its own).
 - macOS is the primary target. The headless screenshots need GPUI's Metal renderer, so `cargo run --example shots` does nothing elsewhere.
 
+## First build
+
+`vendor/` is git-ignored. On a fresh clone run `build/vendor-gpui-component.sh` once before `cargo build`: it vendors gpui-component (kit 0.8.1) and applies `patches/*.patch`. Without it cargo fails at manifest load with a path-dependency error.
+
 ## Run
 
 ```sh

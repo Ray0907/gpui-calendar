@@ -57,3 +57,24 @@ fn every_pressable_control_under_src_ui_has_a_pointer_cursor() {
     let bad: Vec<String> = files.iter().flat_map(|(f, t)| problems(f, t)).collect();
     assert!(bad.is_empty(), "{}", bad.join("\n"));
 }
+
+/// The kit DatePicker popup is a deferred child that occludes hover, so no wrapper can set its cursor; the patched `gpui-component` calendar
+/// item does, and only for enabled day cells and the prev/next buttons. The committed patch is the source of truth; `vendor/` (rebuilt by
+/// `build/vendor-gpui-component.sh`, git-ignored) must exist and match.
+fn guarded_once(text: &str, what: &str) {
+    let at = text.find(".cursor_pointer()").unwrap_or_else(|| panic!("{what} has no cursor_pointer"));
+    let before = &text[at.saturating_sub(500)..at];
+    for guard in ["!state.is_disabled()", "!state.is_muted()", "CalendarItemKind::Previous", "CalendarItemKind::Next", "CalendarItemKind::Day"] {
+        assert!(before.contains(guard), "{what}: cursor_pointer is not guarded by {guard}");
+    }
+    assert_eq!(text.matches(".cursor_pointer()").count(), 1, "{what}");
+}
+
+#[test]
+fn the_calendar_patch_points_enabled_days_and_arrows_only() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    guarded_once(&fs::read_to_string(root.join("patches/gpui-component-0.8.1-calendar-cursor.patch")).unwrap(), "patch");
+    let vendored = root.join("vendor/gpui-component/src/time/calendar.rs");
+    assert!(vendored.exists(), "vendor/ is missing: run build/vendor-gpui-component.sh");
+    guarded_once(&fs::read_to_string(vendored).unwrap(), "vendor calendar.rs");
+}
