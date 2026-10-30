@@ -19,5 +19,6 @@ jobs:
             target
           key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
       - run: sh build/vendor-gpui-component.sh
+      - run: rustup component add clippy
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test --no-fail-fast
