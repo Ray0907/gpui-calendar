@@ -2,6 +2,15 @@
 
 A desktop calendar written in Rust with [GPUI](https://www.gpui.rs) through the `gpui-kit` component crate. Day, week, month (infinite scroll) and year views; drag to create, move and resize events at a 15-minute snap; an event popover; a mini month and a calendar list; light, dark or system appearance with preset colors. Everything is local: no server, no network.
 
+## Screenshots
+
+| Light | Dark |
+|---|---|
+| ![Month view, light](screenshots/month-light.png) | ![Month view, dark](screenshots/month-dark.png) |
+| ![Month picker, light](screenshots/minipick-light.png) | ![Month picker, dark](screenshots/minipick-dark.png) |
+
+The second row shows the mini-calendar month picker: click the title above the mini month, pick a month or step the year.
+
 ## Requirements
 
 - Rust 1.99.1, pinned by `rust-toolchain.toml` (rustup picks it up on its own).
