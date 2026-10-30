@@ -62,3 +62,7 @@ Saves are atomic. A file that is damaged or from a newer version is kept as `cal
 - Reduced motion is read from the `REDUCE_MOTION` environment variable only (GPUI does not yet read the OS setting), e.g. `REDUCE_MOTION=1 cargo run`.
 - Not verified: screen reader and forced-colors behavior, right-to-left layout, windows narrower than 960 px.
 - Week start and 12/24-hour time are stored in the file but have no control in the app yet.
+
+## License
+
+[MIT](LICENSE)
