@@ -28,7 +28,10 @@ gpui_kit::actions!(event_popover, [TrapNext, TrapPrev]);
 
 /// Bind Tab and Shift-Tab inside the popover (once per app).
 pub(super) fn bind_keys(cx: &mut App) {
-    cx.bind_keys([gpui_kit::KeyBinding::new("tab", TrapNext, Some(KEY_CONTEXT)), gpui_kit::KeyBinding::new("shift-tab", TrapPrev, Some(KEY_CONTEXT))]);
+    // The month picker's card traps Tab the same way.
+    for ctx in [KEY_CONTEXT, super::minipick::KEY_CONTEXT] {
+        cx.bind_keys([gpui_kit::KeyBinding::new("tab", TrapNext, Some(ctx)), gpui_kit::KeyBinding::new("shift-tab", TrapPrev, Some(ctx))]);
+    }
 }
 
 /// How the popover was asked for. A keyboard open appears at once, with no motion.

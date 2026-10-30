@@ -58,6 +58,16 @@ fn every_pressable_control_under_src_ui_has_a_pointer_cursor() {
     assert!(bad.is_empty(), "{}", bad.join("\n"));
 }
 
+/// The mini-month title and the month cells are built by hand (the picker keeps their focus handles), so the generic scan is what holds them; this pins that
+/// both are in that scan and that each has the pointer.
+#[test]
+fn the_mini_month_title_and_month_cells_are_pressable_and_pointered() {
+    let text = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/ui/minipick.rs")).unwrap();
+    assert!(problems("src/ui/minipick.rs", &text).is_empty());
+    let unpointered = text.replacen(".pointer()", "", 1);
+    assert_eq!(problems("src/ui/minipick.rs", &unpointered).len(), 1, "the scan sees a title or cell without the hand");
+}
+
 /// The kit DatePicker popup is a deferred child that occludes hover, so no wrapper can set its cursor; the patched `gpui-component` calendar
 /// item does, and only for enabled day cells and the prev/next buttons. The committed patch is the source of truth; `vendor/` (rebuilt by
 /// `build/vendor-gpui-component.sh`, git-ignored) must exist and match.

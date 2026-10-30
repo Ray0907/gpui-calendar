@@ -32,7 +32,7 @@ fn main() {
     // Roles a user operates: each must have a name. GridCell is listed too, it is the month cell.
     let interactive = |r: &str| ["Button", "CheckBox", "RadioButton", "Switch", "ComboBox", "TimeInput", "TextInput", "MultilineTextInput", "Tab", "MenuItem", "GridCell"].contains(&r);
     // Many elements of one kind are summarised in the artifact; they are still all checked.
-    let group = ["month-cell-", "month-head-", "month-ev-", "month-more-", "year-day-", "year-month-", "year-ring-", "week-head-", "mini-day-"];
+    let group = ["month-cell-", "month-head-", "month-ev-", "month-more-", "year-day-", "year-month-", "year-ring-", "week-head-", "mini-day-", "minipick-month-"];
     let day = |d| NaiveDate::from_ymd_opt(2026, 10, d).unwrap();
     let events = || {
         let soon = day(28).and_hms_opt(19, 0, 0).unwrap();
@@ -43,7 +43,7 @@ fn main() {
     let mut dup_report: Vec<String> = Vec::new();
     let mut total = 0usize;
 
-    for name in ["month", "month-changed", "week", "day", "year", "appearance", "appearance-changed", "popover", "popover-edited"] {
+    for name in ["month", "month-changed", "minipick", "week", "day", "year", "appearance", "appearance-changed", "popover", "popover-edited"] {
         let view = match name { "week" => View::Week, "day" => View::Day, "year" => View::Year, _ => View::Month };
         let mut win = open(Mode::Light, Neutral::Cool, view, events(), (1440., 900.));
         // Move the model away from its defaults so a state that ignores the model shows.
@@ -70,6 +70,9 @@ fn main() {
             _ => {}
         }
         win.render();
+        if name == "minipick" {
+            win.act(|w, cx| w.click("mini-title", cx));
+        }
         if name == "popover-edited" {
             win.act(|w, cx| w.click("pop-cal-1", cx));
             win.act(|w, cx| w.click("pop-all-day", cx));
@@ -167,6 +170,21 @@ fn main() {
                 let got = get(&id).map(|r| (r.disabled.unwrap_or(false), r.label.contains("unavailable")));
                 if got != Some((off, off)) {
                     bad(format!("{id} (disabled, labelled unavailable) is {got:?}, the model says {off}"));
+                }
+            }
+        }
+        if name == "minipick" {
+            // The title names the action and says it is expanded; each month is named with its month and year and is checked only for the view's month.
+            want("mini-title", "expanded", Some(true), get("mini-title").map(|r| r.expanded));
+            if get("mini-title").map(|r| r.label.as_str()) != Some("Choose month") {
+                bad("mini-title is not named \"Choose month\"".into());
+            }
+            for m in 1..=12u32 {
+                let id = format!("minipick-month-2026-{m:02}");
+                want(&id, "checked", Some(m == chrono::Datelike::month(&anchor)), get(&id).map(|r| r.checked));
+                let name = NaiveDate::from_ymd_opt(2026, m, 1).unwrap().format("%B 2026").to_string();
+                if get(&id).map(|r| r.label.as_str()) != Some(name.as_str()) {
+                    bad(format!("{id} is not named {name:?}"));
                 }
             }
         }

@@ -30,6 +30,8 @@ fn main() {
         ("year-light", Mode::Light, false, View::Year, Sample::Year, (17, 35), None),
         ("year-dark", Mode::Dark, false, View::Year, Sample::Year, (17, 35), None),
         ("appearance-dark", Mode::Dark, true, View::Month, Sample::Seed, (17, 35), None),
+        ("minipick-light", Mode::Light, false, View::Month, Sample::Month, (17, 35), None),
+        ("minipick-dark", Mode::Dark, false, View::Month, Sample::Month, (17, 35), None),
         ("popover-light", Mode::Light, false, View::Week, Sample::Week, (11, 20), Some((12, false))),
         ("popover-dark", Mode::Dark, false, View::Week, Sample::Week, (11, 20), Some((12, false))),
         ("popover-date-light", Mode::Light, false, View::Week, Sample::Week, (11, 20), Some((12, true))),
@@ -84,6 +86,13 @@ fn main() {
                 for _ in 0..3 {
                     cx.update_window(handle, |_, w, cx| w.render_frame(cx)).expect("render");
                 }
+            }
+        }
+        if file.starts_with("minipick") {
+            // The mini month's title opens the month picker over the sidebar.
+            cx.update_window(handle, |_, w, cx| w.click("mini-title", cx)).expect("open month picker");
+            for _ in 0..3 {
+                cx.update_window(handle, |_, w, cx| w.render_frame(cx)).expect("render");
             }
         }
         let image = cx.capture_screenshot(handle).expect("offscreen rendering");

@@ -114,3 +114,7 @@ harness = false
 [[test]]
 name = "time_list_hover"
 harness = false
+
+[[test]]
+name = "minipick_pixels"
+harness = false

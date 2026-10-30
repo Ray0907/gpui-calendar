@@ -5,6 +5,7 @@ mod a11y;
 mod appearance;
 mod controls;
 mod header;
+mod minipick;
 pub mod model;
 mod month;
 mod popover;

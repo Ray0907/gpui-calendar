@@ -20,6 +20,7 @@ fn main() {
                 Spec::row("calendar-row-0", |t| t.neutral.surface),
                 Spec::row("calendar-row-2", |t| t.neutral.surface),
                 Spec::ghost("mini-prev", |t| t.neutral.surface, |t| t.neutral.surface),
+                Spec::ghost("mini-title", |t| t.neutral.surface, |t| t.neutral.surface),
                 Spec::ghost("mini-next", |t| t.neutral.surface, |t| t.neutral.surface),
                 Spec::ghost("mini-day-2026-10-14", |t| t.neutral.surface, |t| t.neutral.surface),
                 Spec::ghost("account-menu", |t| t.neutral.surface, |t| t.neutral.surface),

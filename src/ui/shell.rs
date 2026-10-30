@@ -50,7 +50,7 @@ pub(super) fn is_dark(a: WindowAppearance) -> bool {
 pub struct Shell {
     pub model: Model,
     /// Focus when nothing inside has it, so the shortcuts have a place to arrive.
-    root: gpui_kit::FocusHandle,
+    pub(super) root: gpui_kit::FocusHandle,
     clock: Clock,
     /// The theme last handed to gpui-kit, so unchanged frames do not push it again.
     pushed: Option<Theme>,
@@ -60,6 +60,7 @@ pub struct Shell {
     pub(super) year: super::year::YearView,
     pub(super) pop: Option<super::popover::Form>,
     pub(super) pop_seq: usize,
+    pub(super) minipick: super::minipick::MiniPick,
     pub(super) anchors: super::popover::Anchors,
     /// Deletes and saves, for the toast's Undo.
     pub(super) undo: gpui_kit::base::UndoHistory<crate::domain::form::Edit>,
@@ -111,6 +112,7 @@ impl Shell {
             year,
             pop: None,
             pop_seq: 0,
+            minipick: super::minipick::MiniPick::new(cx),
             anchors: Default::default(),
             undo: gpui_kit::base::UndoHistory::new(),
             toast: None,
@@ -229,7 +231,7 @@ impl Shell {
     /// `true` if it was one.
     fn shortcut(&mut self, key: &str, modified: bool, held: bool, window: &mut Window, cx: &mut Context<Self>) -> bool {
         // A field or the popover owns the keyboard, and the Appearance screen has no calendar behind it.
-        let blocked = self.pop.is_some() || self.model.screen != Screen::Calendar;
+        let blocked = self.pop.is_some() || self.minipick.open || self.model.screen != Screen::Calendar;
         let Some(cmd) = command(key, modified, held, blocked) else { return false };
         match cmd {
             // A refusal is said in the notice bar and leaves the key to whoever else wants it.
@@ -290,6 +292,10 @@ impl Render for Shell {
             }
         });
         let popover = self.popover_layer(&t, window, cx);
+        if narrow {
+            self.dismiss_minipick(true, window, cx); // the rail has no mini month, so no title to hold the picker or take the focus back
+        }
+        let minipick = self.minipick_layer(&t, window, cx);
         let toast = self.toast_layer(&t, window, cx);
         div()
             .size_full()
@@ -305,6 +311,11 @@ impl Render for Shell {
             // before key-down listeners: an open date picker takes its Cancel and stops it, so only a closed one
             // (which hands it on) lets Esc get here. One Esc therefore never closes both.
             .capture_key_down(cx.listener(|this, e: &KeyDownEvent, window, cx| {
+                if e.keystroke.key == "escape" && this.minipick.open {
+                    this.close_minipick(window, cx);
+                    cx.stop_propagation();
+                    return;
+                }
                 if e.keystroke.key == "escape" && this.pop.is_some() {
                     // An open time list takes the first Escape; the next one closes the card.
                     if !this.close_time_list(cx) {
@@ -344,6 +355,7 @@ impl Render for Shell {
                     .child(main),
             )
             .children(popover)
+            .children(minipick)
             .children(toast)
     }
 }

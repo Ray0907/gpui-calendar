@@ -5,10 +5,11 @@ mod events;
 mod keys;
 mod merge;
 mod month;
+mod pick;
 mod week;
 mod year;
 
-pub use keys::{Command, command};
+pub use {keys::{Command, command}, pick::*};
 pub use month::NEW_EVENT_TITLE;
 
 use std::io;

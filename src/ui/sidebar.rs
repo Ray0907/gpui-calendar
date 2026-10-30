@@ -226,6 +226,7 @@ impl Shell {
         let n = &t.neutral;
         let prev = self.mini_nav(t, "mini-prev", "Previous month in mini calendar", IconName::ChevronLeft, -1, window, cx);
         let next = self.mini_nav(t, "mini-next", "Next month in mini calendar", IconName::ChevronRight, 1, window, cx);
+        let title = self.mini_title_button(t, cx);
         let letters = self.model.mini_weekdays();
         let days = self.model.mini_days();
         let cells: Vec<_> = days.iter().map(|d| self.mini_day(t, d, window, cx)).collect();
@@ -261,7 +262,7 @@ impl Shell {
                     .mb(px(6.))
                     .text_size(px(12.))
                     .child(prev)
-                    .child(div().id("mini-title").test_support().flex_1().text_center().whitespace_nowrap().overflow_hidden().child(self.model.mini_title()))
+                    .child(title)
                     .child(next),
             )
             .child(div().flex().mb(px(MINI_ROW_GAP)).children(weekdays))
